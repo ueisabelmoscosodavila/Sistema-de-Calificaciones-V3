@@ -25,6 +25,7 @@
     .btn-warn{background:#d97706;color:#fff}.btn-danger{background:#dc2626;color:#fff}.btn-ok{background:#047857;color:#fff}
     .card{background:#fff;border:1px solid #e2e8f0;border-radius:1.25rem;padding:1.1rem;box-shadow:0 1px 2px rgba(0,0,0,.04)}
     .tabla{width:100%;font-size:12px}.tabla th{background:#f1f5f9;text-align:left;padding:6px 8px;font-size:11px}.tabla td{padding:6px 8px;border-top:1px solid #f1f5f9}
+    .hidden{display:none!important} /* v4.8: no depende del estilo externo para ocultar */
     /* ===== Informes impresos ===== */
     .rep{font-family:Arial,Helvetica,sans-serif;color:#111;font-size:11px;line-height:1.35}
     .rep .enc{text-align:center;border-bottom:2px solid #38bdf8;padding-bottom:6px;position:relative;min-height:66px;padding-left:78px;padding-right:78px}
@@ -42,6 +43,46 @@
     .rep .norma{margin-top:12px;font-size:9.5px;font-style:italic;color:#334155;border-top:1px dashed #94a3b8;padding-top:4px}
     .rep .pagina{page-break-after:always;break-after:page;margin-bottom:28px}
     .rep .pagina:last-child{page-break-after:auto;break-after:auto}
+    /* v4.8: boletas en tamaño A5 (148 × 210 mm) */
+    .rep.a5{font-size:8px;line-height:1.2}
+    .rep.a5 .pagina{max-width:136mm;margin:0 auto 24px}
+    .rep.a5 .enc{min-height:40px;padding-left:46px;padding-right:46px;padding-bottom:3px}
+    .rep.a5 .enc .logo{height:40px}
+    .rep.a5 .enc div{font-size:7px}
+    .rep.a5 .enc .inst{font-size:10.5px}
+    .rep.a5 .enc .tit{font-size:9px;margin-top:2px}
+    .rep.a5 .ficha{font-size:7.5px;padding:3px 5px;margin-top:4px;gap:0 10px}
+    .rep.a5 table{margin-top:4px}
+    .rep.a5 th,.rep.a5 td{font-size:7px;padding:1px 3px}
+    .rep.a5 .firmas{margin-top:26px;gap:10px}
+    .rep.a5 .firma b{font-size:7px}.rep.a5 .firma small{font-size:6.5px}
+    .rep.a5 .norma{font-size:6px;margin-top:5px;line-height:1.15}
+    /* v4.10: boleta A5 HORIZONTAL a dos columnas; dos boletas por hoja A4 vertical (una arriba y otra abajo) */
+    .rep{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .rep.a5 .pagina{max-width:198mm}
+    .rep .bol2c{display:flex;gap:3mm;align-items:flex-start}
+    .rep .bol2c .izq{flex:0 0 57%}.rep .bol2c .der{flex:1;min-width:0}
+    .rep .bol2c table:first-child{margin-top:4px}
+    .rep.a5 .ficha{grid-template-columns:1.4fr 1fr 1fr}
+    .rep.a5 .firmas{margin-top:12px}
+    .rep.a5 th,.rep.a5 td{padding:0.5px 3px;line-height:1.15}
+    .rep.a5 .enc{min-height:34px}.rep.a5 .enc .logo{height:34px}
+    .rep.a5 .ficha{padding:2px 5px;margin-top:3px}
+    .rep .sfon{display:inline-block;min-width:14px;padding:0 2px;border-radius:2px;font-weight:700}
+    .rep .sf-S{background:#bbf7d0;color:#14532d}.rep .sf-F{background:#bfdbfe;color:#1e3a8a}.rep .sf-O{background:#fef08a;color:#713f12}.rep .sf-N{background:#fecaca;color:#7f1d1d}
+    .rep.a4x2 .hoja2{display:flex;flex-direction:column;width:210mm;margin:0 auto 24px;break-after:page;page-break-after:always}
+    .rep.a4x2 .hoja2:last-child{break-after:auto;page-break-after:auto}
+    .rep.a4x2 .hoja2 .pagina{width:210mm;height:148.5mm;max-width:none;box-sizing:border-box;padding:6mm;margin:0;overflow:hidden;break-after:auto;page-break-after:auto}
+    .rep.a4x2 .hoja2 .pagina + .pagina{border-top:1px dashed #94a3b8}
+    /* v4.10: tabulación y gráficos de informes */
+    .rep .graf{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;margin-top:8px;break-inside:avoid}
+    .rep .graf svg{border:1px solid #cbd5e1;border-radius:4px;background:#fff}
+    .rep .kpis{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.rep .kpi{border:1px solid #7dd3fc;background:#f0f9ff;border-radius:4px;padding:3px 8px;font-size:10px}.rep .kpi b{font-size:12px;color:#0c4a6e}
+    .rep table.t3{table-layout:fixed}.rep table.t3 th:not(:first-child){width:22%}
+    .rep .sec{margin-top:4px;font-weight:800;font-size:8px;color:#0c4a6e;text-transform:uppercase}
+    /* v4.8: escalas de la boleta con letra más pequeña */
+    .rep .leyenda th,.rep .leyenda td{font-size:7.5px;line-height:1.15}
+    .rep.a5 .leyenda th,.rep.a5 .leyenda td{font-size:5.5px;line-height:1.1;padding:1px 2px}
     @media print{
       body{background:#fff!important;padding:0!important}
       body *{visibility:hidden}
@@ -225,7 +266,10 @@
         <button onclick="genAlertasAsis(true)" class="btn btn-danger">🚨 Alertas de asistencia del mes (toda la jornada)</button>
         <button onclick="genInforme('anual')" class="btn btn-ok">📊 Reporte anual de calificaciones</button>
         <button onclick="genInforme('anual_asig')" class="btn btn-primary">📗 Informe anual por asignatura</button>
+        <button onclick="genCursoAsig(false)" class="btn btn-primary">📚 Curso – todas las asignaturas (trimestre)</button>
+        <button onclick="genCursoAsig(true)" class="btn btn-primary">📚 Curso – todas las asignaturas (anual)</button>
         <button onclick="genInforme('ficha_inicial')" class="btn btn-ok">🌱 Ficha cualitativa (Inicial / Preparatoria)</button>
+        <button onclick="genInforme('ambitos')" class="btn btn-ok">📊 Informe por ámbitos (Inicial / Preparatoria)</button>
         <button onclick="imprimirNomina('inf')" class="btn btn-sec">🎒 Nómina del curso</button>
       </div>
     </div>
@@ -372,6 +416,7 @@
           <div><label class="lbl">6. Corte de alerta</label><select id="pl-corte" class="inp" onchange="plCargar()"></select></div>
         </div>
         <div id="pl-subs" class="flex flex-wrap gap-1"></div>
+        <div id="pl-dist" class="hidden text-[11px] rounded-xl px-3 py-2 mt-1"></div>
       </div>
       <div class="card space-y-3">
         <div id="pl-banner" class="hidden"></div>
@@ -447,6 +492,16 @@
 </div>
 
 <!-- MODAL IMPRIMIR BOLETAS -->
+<div id="m-varias" class="hidden fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50">
+  <div class="bg-white max-w-md w-full p-5 rounded-3xl space-y-3 text-xs">
+    <h3 class="font-black text-sm">📚 Informe de varias asignaturas</h3>
+    <p class="text-slate-600" id="mv-curso"></p>
+    <div><label class="lbl">Informe</label><select id="mv-tipo" class="inp"><option value="trimestral">Trimestral (con tabulación y gráficos)</option><option value="anual_asig">Anual (con tabulación y gráficos)</option></select></div>
+    <div><label class="lbl">Asignaturas de su distributivo</label><div id="mv-asig" class="grid grid-cols-2 gap-1 bg-slate-50 border rounded-xl p-2"></div></div>
+    <div class="flex gap-2"><button onclick="cerrarModal('m-varias')" class="btn bg-slate-100 w-1/2">Cancelar</button><button onclick="genVarias()" class="btn btn-ok w-1/2">🖨️ Generar</button></div>
+  </div>
+</div>
+
 <div id="m-cierre" class="hidden fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50">
   <div class="bg-white max-w-lg w-full p-5 rounded-3xl space-y-3 text-xs">
     <h3 class="font-black text-sm text-red-800">🔒 Cerrar el año lectivo <span id="mc-anio"></span></h3>
@@ -472,6 +527,7 @@
       <div><label class="lbl">Jornada</label><select id="bo-jor" class="inp" onchange="boEstudiantes()"></select></div>
       <div><label class="lbl">Año de básica / curso</label><select id="bo-gra" class="inp" onchange="boEstudiantes()"></select></div>
       <div><label class="lbl">Paralelo</label><select id="bo-par" class="inp" onchange="boEstudiantes()"></select></div>
+      <div class="col-span-2"><label class="lbl">Tamaño de impresión</label><select id="bo-papel" class="inp"><option value="A5">Una boleta por hoja A5</option><option value="A4x2">Dos boletas por hoja A4 (con línea de corte)</option></select></div>
       <div><label class="lbl">Hasta el trimestre</label><select id="bo-trim" class="inp"></select></div>
       <div class="col-span-2"><label class="lbl">Estudiante</label><select id="bo-est" class="inp"></select></div>
     </div>
@@ -550,6 +606,9 @@
       <input id="md-optn" class="inp" placeholder="Ej.: Redacción creativa, Laboratorio de ciencias, Robótica">
       <div id="md-optcat" class="flex flex-wrap gap-1 mt-1"></div>
       <p class="text-[10px] text-slate-500 mt-0.5">Se guardan como "Optativa: Redacción creativa" para que siempre se identifiquen como optativas.</p></div>
+    <div><label class="lbl">Distributivo detallado <span class="font-normal text-slate-500">(una línea por clase: Año – Paralelo – Asignatura; si da clases en las dos jornadas: Jornada – Año – Paralelo – Asignatura)</span></label>
+      <textarea id="md-dist" class="inp" rows="3" placeholder="9° Básica Superior – A – Matemática&#10;9° Básica Superior – B – Matemática&#10;1° Bachillerato – A – Física"></textarea>
+      <p class="text-[10px] text-slate-500 mt-0.5">Con esto el sistema advierte al docente si elige un año, paralelo o asignatura que no le corresponde.</p></div>
     <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
       <div><label class="lbl">¿Es docente tutor?</label><select id="md-tut" class="inp"><option value="NO">NO</option><option value="SI">SÍ</option></select></div>
       <div><label class="lbl">Curso de tutoría</label><select id="md-tgra" class="inp"></select></div>
@@ -692,7 +751,45 @@ function api(fn, ...args) {
   });
 }
 const FN_ARCHIVO = ['apiReporte', 'apiListarEstudiantes', 'apiAsignaturasCurso'];
+// v4.11: el docente confirma qué va a guardar (y se le advierte si no corresponde a su distributivo)
+const FN_GUARDA_DOC = { apiGuardarFormativa: 'Evaluación formativa', apiGuardarSumativa: 'Evaluación sumativa / mejora', apiGuardarInicial: 'Destrezas',
+  apiGuardarRefuerzo: 'Refuerzo pedagógico', apiGuardarCualitativa: 'Evaluación cualitativa', apiGuardarConducta: 'Comportamiento', apiGuardarAsistencia: 'Asistencia',
+  apiGuardarComunicaciones: 'Comunicación a representantes', apiGuardarEFB: 'Evaluación final de Bachillerato', apiGuardarObservaciones: 'Observaciones del informe' };
+function distCoincide(c) {
+  const L = (S.cat.perfil && S.cat.perfil.distributivo) || [];
+  if (!L.length) return null; // sin distributivo detallado
+  const AULA = ['Matemática', 'Lengua y Literatura', 'Estudios Sociales', 'Ciencias Naturales', 'Educación Cultural y Artística', 'Destrezas (Docente de Aula)'];
+  return L.some(x => x.grado === c.grado && x.paralelo === c.paralelo && (!x.jornada || x.jornada === c.jornada) &&
+    (!c.asignatura || x.asignatura === c.asignatura || (/docente de aula/i.test(x.asignatura) && AULA.includes(c.asignatura))));
+}
+const SUBS_TUTOR = ['aia', 'cond', 'just', 'efb', 'ovp'];
+// v4.12: si la combinación no está en el distributivo detallado, NO se cargan los estudiantes (el servidor también lo bloquea)
+function bloqueoDistributivo(c) {
+  if (SUBS_TUTOR.includes(S.sub) || (S.sub === 'asis' && ordenG(c.grado) < 8)) return ''; // funciones de tutoría
+  const r = distCoincide(c), exige = !S.cat.params || S.cat.params.exigirDist !== false;
+  if (r === true) return '';
+  if (r === null) return exige ? '⛔ Rectorado aún no registra su distributivo detallado. Solicite que lo registren para poder ingresar y consultar calificaciones.' : '';
+  return `⛔ No tiene asignado: ${esc(c.jornada)} · ${esc(c.grado)} · Paralelo ${esc(c.paralelo)}${c.asignatura ? ' · ' + esc(c.asignatura) : ''}.<br>
+    Revise la jornada, el año de básica o curso, el paralelo y la asignatura que eligió. Si cree que es un error de su distributivo, comuníquese con Rectorado.`;
+}
+function avisoDistributivo() {
+  const el = $('pl-dist'); if (!el || !S.cat.perfil) return;
+  const msg = bloqueoDistributivo(plCtx()), sinDist = distCoincide(plCtx()) === null && S.cat.params && S.cat.params.exigirDist === false;
+  el.className = 'text-[11px] rounded-xl px-3 py-2 mt-1 ' + (msg ? 'bg-red-100 border border-red-300 text-red-900 font-bold' : 'bg-slate-50 border text-slate-600');
+  el.innerHTML = msg || (sinDist ? 'ℹ️ Rectorado aún no registra su distributivo detallado: revise con cuidado la jornada, el año, el paralelo y la asignatura.' : '');
+  el.classList.toggle('hidden', !el.innerHTML);
+}
+function confirmarGuardado(fn, ctx) {
+  const c = Object.assign({}, ctx || {}), sub = SUBS_TUTOR.includes(S.sub) || fn === 'apiGuardarConducta' || fn === 'apiGuardarEFB';
+  if (sub) c.asignatura = '';
+  const corte = c.corteId ? (S.cat.periodos.find(p => p.id === c.corteId) || {}).nombre : '';
+  const r = distCoincide(c);
+  const txt = `Va a guardar: ${FN_GUARDA_DOC[fn]}\n\n${c.jornada || ''} · ${c.grado || ''} · Paralelo ${c.paralelo || ''}${c.asignatura ? ' · ' + c.asignatura : ''}${c.trimestre ? ' · ' + c.trimestre + '° trimestre' : ''}${corte ? ' (' + corte + ')' : ''}${c.fecha ? ' · fecha ' + c.fecha : ''}`
+    + '\n\n¿Es correcto?';
+  return confirm(txt);
+}
 const apiT = (fn, ...a) => {
+  if (S.ses && S.ses.rol === 'DOCENTE' && FN_GUARDA_DOC[fn] && !confirmarGuardado(fn, a[0])) return Promise.reject(new Error('Guardado cancelado: revise los datos antes de guardar.'));
   // Año anterior seleccionado en Informes: esas consultas leen el archivo de ese año (solo lectura)
   if (S.anioArch && FN_ARCHIVO.includes(fn)) { const i = fn === 'apiReporte' ? 1 : 0; a[i] = Object.assign({}, a[i] || {}, { archivo: S.anioArch }); }
   return api(fn, S.token, ...a);
@@ -1026,6 +1123,7 @@ function abrirDocente(id) {
   $('md-tit2').value = d.titulo || ''; $('md-nom').value = d.nombres || ''; $('md-ape').value = d.apellidos || '';
   $('md-cor').value = d.correo || ''; $('md-ced').value = d.cedula || ''; $('md-jor').value = d.jornada; $('md-car').value = d.carga || 30;
   $('md-opt').value = d.optativas || 'NO'; $('md-est').value = d.estado || 'ACTIVO';
+  $('md-dist').value = String(d.distributivo || '').split(/;\s*/).filter(Boolean).join('\n');
   $('md-gra').innerHTML = gradosList().map(g => `<label class="flex gap-1 items-center"><input type="checkbox" value="${esc(g)}" ${d.grados.includes(g) ? 'checked' : ''}>${esc(g)}</label>`).join('');
   $('md-par').innerHTML = S.cat.paralelos.map(p => `<label class="flex gap-1 items-center"><input type="checkbox" value="${p}" ${d.paralelos.includes(p) ? 'checked' : ''}>${p}</label>`).join('');
   $('md-asig').innerHTML = S.cat.materias.map(m => `<label class="flex gap-1 items-center"><input type="checkbox" value="${esc(m)}" ${d.asignaturas.includes(m) ? 'checked' : ''}>${esc(m)}</label>`).join('');
@@ -1048,7 +1146,8 @@ async function guardarDocente() {
   const o = {
     id: $('md-id').value, titulo: $('md-tit2').value, nombres: $('md-nom').value, apellidos: $('md-ape').value, correo: $('md-cor').value, cedula: $('md-ced').value,
     jornada: $('md-jor').value, carga: $('md-car').value, grados: marcados('md-gra'), paralelos: marcados('md-par'), asignaturas: asig,
-    esTutor: $('md-tut').value, tutorGrado: $('md-tgra').value, tutorParalelo: $('md-tpar').value, tutorJornada: $('md-tjor').value, optativas: $('md-opt').value, optativasNombres: optn, estado: $('md-est').value
+    esTutor: $('md-tut').value, tutorGrado: $('md-tgra').value, tutorParalelo: $('md-tpar').value, tutorJornada: $('md-tjor').value, optativas: $('md-opt').value, optativasNombres: optn, estado: $('md-est').value,
+    distributivo: $('md-dist').value
   };
   await run(async () => {
     const r = await apiT('apiGuardarDocente', o);
@@ -1387,7 +1486,9 @@ async function boEstudiantes() {
 async function genBoletas() {
   const f = { jornada: $('bo-jor').value, grado: $('bo-gra').value, paralelo: $('bo-par').value, trimestre: Number($('bo-trim').value), idEstudiante: $('bo-est').value };
   let ok = false;
+  S.boPapel = $('bo-papel') ? $('bo-papel').value : 'A5';
   await run(async () => { mostrarReporte(await apiT('apiReporte', 'boleta2', f)); ok = true; });
+  S.boPapel = 'A5';
   if (ok) cerrarModal('m-bol');
 }
 
@@ -1463,6 +1564,7 @@ async function guardarAsistencia() {
 function campoDocente(h) {
   h = normH(h);
   if (!h) return null;
+  if (/distributivo|detalle/.test(h)) return 'distributivo';
   if (/jornada.*tutor|tutor.*jornada/.test(h)) return 'tutorJornada';
   if (/paralelo.*tutor|tutor.*paralelo/.test(h)) return 'tutorParalelo';
   if (/(curso|grado|ano).*tutor|tutor.*(curso|grado|ano)/.test(h)) return 'tutorGrado';
@@ -1495,7 +1597,7 @@ function leerExcelDocentes(file) {
       }
       if (hi < 0) throw new Error('No se encontró la fila de títulos. El archivo debe tener al menos las columnas "Nombres" y "Apellidos".');
       const val = (row, k) => mapa[k] === undefined ? '' : String(row[mapa[k]] == null ? '' : row[mapa[k]]).trim();
-      const campos = ['cedula', 'titulo', 'nombres', 'apellidos', 'correo', 'jornada', 'carga', 'asignaturas', 'grados', 'paralelos', 'esTutor', 'tutorGrado', 'tutorParalelo', 'tutorJornada', 'optativas'];
+      const campos = ['cedula', 'titulo', 'nombres', 'apellidos', 'correo', 'jornada', 'carga', 'asignaturas', 'grados', 'paralelos', 'esTutor', 'tutorGrado', 'tutorParalelo', 'tutorJornada', 'optativas', 'distributivo'];
       const filas = [];
       for (let i = hi + 1; i < aoa.length; i++) {
         if (!aoa[i].some(v => String(v).trim() !== '')) continue;
@@ -1538,11 +1640,12 @@ function descargarCredenciales() {
 function plantillaDocentes() {
   if (typeof XLSX === 'undefined') return toast('No se pudo cargar el generador de Excel.', 'err');
   const ws = XLSX.utils.aoa_to_sheet([
-    ['Cédula', 'Título', 'Nombres', 'Apellidos', 'Correo', 'Jornada', 'Carga horaria', 'Asignaturas', 'Años / cursos', 'Paralelos', 'Tutor', 'Curso tutoría', 'Paralelo tutoría', 'Jornada tutoría', 'Optativas'],
-    ['0102030405', 'Lic.', 'Ana María', 'Pérez López', 'ana.perez@correo.com', 'Matutina', 25, 'Docente de Aula', '5° Básica Media', 'A', 'SI', '5° Básica Media', 'A', 'Matutina', ''],
-    ['0106070809', 'Mgs.', 'Juan', 'Mora Ruiz', '', 'Ambas', 30, 'Matemática; Física; Orientación Vocacional y Profesional', '9° Básica Superior; 1° Bachillerato', 'A; B', 'NO', '', '', '', 'Redacción creativa']
+    ['Cédula', 'Título', 'Nombres', 'Apellidos', 'Correo', 'Jornada', 'Carga horaria', 'Asignaturas', 'Años / cursos', 'Paralelos', 'Tutor', 'Curso tutoría', 'Paralelo tutoría', 'Jornada tutoría', 'Optativas', 'Distributivo detallado'],
+    ['0102030405', 'Lic.', 'Ana María', 'Pérez López', 'ana.perez@correo.com', 'Matutina', 25, 'Docente de Aula', '5° Básica Media', 'A', 'SI', '5° Básica Media', 'A', 'Matutina', '', '5° Básica Media – A – Docente de Aula'],
+    ['0106070809', 'Mgs.', 'Juan', 'Mora Ruiz', '', 'Ambas', 30, 'Matemática; Física; Orientación Vocacional y Profesional', '9° Básica Superior; 1° Bachillerato', 'A; B', 'NO', '', '', '', 'Redacción creativa',
+      'Matutina – 9° Básica Superior – A – Matemática; Matutina – 9° Básica Superior – B – Orientación Vocacional y Profesional; Vespertina – 1° Bachillerato – A – Física']
   ]);
-  ws['!cols'] = [12, 8, 16, 18, 24, 10, 8, 40, 34, 10, 6, 18, 10, 12, 22].map(w => ({ wch: w }));
+  ws['!cols'] = [12, 8, 16, 18, 24, 10, 8, 40, 34, 10, 6, 18, 10, 12, 22, 70].map(w => ({ wch: w }));
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Docentes');
   XLSX.writeFile(wb, 'plantilla_docentes.xlsx');
 }
@@ -1657,6 +1760,94 @@ async function genInforme(tipo) {
   };
   await run(async () => mostrarReporte(await apiT('apiReporte', tipo, f)));
 }
+async function genCursoAsig(anual) {
+  const f = { jornada: $('inf-jor').value, grado: $('inf-gra').value, paralelo: $('inf-par').value, trimestre: anual ? 'ANUAL' : Number($('inf-trim').value), periodo: anual ? 'ANUAL' : '' };
+  await run(async () => mostrarReporte(await apiT('apiReporte', 'curso_asignaturas', f)));
+}
+// ---- v4.10: tabulación y gráficos (SVG dentro del informe: se imprime igual) ----
+const COL_NIV = n => n === 3 ? ['#16a34a', '#f59e0b', '#dc2626'] : ['#16a34a', '#0ea5e9', '#f59e0b', '#dc2626'];
+function nivelDe(niveles, cod) { return niveles.findIndex(nv => nv.letras.includes(cod)); }
+function contar(niveles, cods) { const c = niveles.map(() => 0); cods.forEach(x => { const i = nivelDe(niveles, x); if (i >= 0) c[i]++; }); return c; }
+function tablaTab(niveles, cols) {
+  // cols: [{titulo, conteo}]
+  const tot = cols.map(c => c.conteo.reduce((a, b) => a + b, 0));
+  return `<table style="margin-top:6px"><thead><tr><th style="text-align:left">Nivel de logro</th>${cols.map(c => `<th colspan="2">${esc(c.titulo)}</th>`).join('')}</tr>
+    <tr><th></th>${cols.map(() => '<th>N°</th><th>%</th>').join('')}</tr></thead><tbody>
+    ${niveles.map((nv, i) => `<tr><td><span class="sfon" style="background:${COL_NIV(niveles.length)[i]};color:#fff">&nbsp;</span> ${esc(nv.nombre)}</td>${cols.map((c, k) => `<td class="c">${c.conteo[i]}</td><td class="c">${tot[k] ? (c.conteo[i] * 100 / tot[k]).toFixed(1) : '0.0'}%</td>`).join('')}</tr>`).join('')}
+    <tr><td class="b">Total con calificación</td>${tot.map(t => `<td class="c b">${t}</td><td class="c b">${t ? '100%' : ''}</td>`).join('')}</tr></tbody></table>`;
+}
+function svgBarras(niveles, series, titulo, w = 420, h = 200) {
+  // series: [{nombre, conteo}] → barras agrupadas por nivel
+  const col = COL_NIV(niveles.length), pad = { l: 30, r: 8, t: 30, b: 34 }, W = w - pad.l - pad.r, H = h - pad.t - pad.b;
+  const paso = Math.max(1, Math.ceil(Math.max(1, ...series.flatMap(s => s.conteo)) / 4)), max = paso * 4, gw = W / niveles.length, bw = Math.min(26, (gw - 10) / series.length);
+  const tonos = [1, 0.75, 0.55, 0.35];
+  let g = `<text x="${w / 2}" y="14" text-anchor="middle" font-size="11" font-weight="700" fill="#0c4a6e">${esc(titulo)}</text>`;
+  for (let k = 0; k <= 4; k++) { const y = pad.t + H - H * k / 4, v = paso * k; g += `<line x1="${pad.l}" x2="${w - pad.r}" y1="${y}" y2="${y}" stroke="#e2e8f0"/><text x="${pad.l - 4}" y="${y + 3}" font-size="8" text-anchor="end" fill="#475569">${v}</text>`; }
+  niveles.forEach((nv, i) => {
+    const x0 = pad.l + gw * i + (gw - bw * series.length) / 2;
+    series.forEach((s, j) => {
+      const v = s.conteo[i], bh = H * v / max, x = x0 + j * bw, y = pad.t + H - bh;
+      g += `<rect x="${x}" y="${y}" width="${bw - 2}" height="${bh}" fill="${col[i]}" fill-opacity="${tonos[j] || 0.3}"><title>${esc(s.nombre)}: ${v}</title></rect>`;
+      if (v) g += `<text x="${x + (bw - 2) / 2}" y="${y - 2}" font-size="8" text-anchor="middle" fill="#111">${v}</text>`;
+    });
+    g += `<text x="${pad.l + gw * i + gw / 2}" y="${pad.t + H + 12}" font-size="9" text-anchor="middle" font-weight="700">${esc(nv.codigo === 'ALC' ? 'Alcanzado' : nv.codigo === 'PRO' ? 'En proceso' : nv.codigo === 'INI' ? 'Iniciado' : nv.codigo)}</text>`;
+  });
+  if (series.length > 1) g += series.map((s, j) => `<rect x="${pad.l + j * 80}" y="${h - 12}" width="9" height="9" fill="#475569" fill-opacity="${tonos[j] || 0.3}"/><text x="${pad.l + j * 80 + 12}" y="${h - 4}" font-size="8">${esc(s.nombre)}</text>`).join('');
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" font-family="Arial">${g}</svg>`;
+}
+function svgPromedios(items, titulo, w = 300, h = 200, min = 7) {
+  // items: [{nombre, valor}] barras 0-10 con línea de la nota mínima
+  const largo = items.some(it => String(it.nombre).length > 9), pad = { l: largo ? 56 : 26, r: 8, t: 30, b: largo ? 62 : 30 }, W = w - pad.l - pad.r, H = h - pad.t - pad.b, gw = W / Math.max(1, items.length), bw = Math.min(30, gw - 6);
+  let g = `<text x="${w / 2}" y="14" text-anchor="middle" font-size="11" font-weight="700" fill="#0c4a6e">${esc(titulo)}</text>`;
+  for (let k = 0; k <= 10; k += 2) { const y = pad.t + H - H * k / 10; g += `<line x1="${pad.l}" x2="${w - pad.r}" y1="${y}" y2="${y}" stroke="#e2e8f0"/><text x="${pad.l - 4}" y="${y + 3}" font-size="8" text-anchor="end" fill="#475569">${k}</text>`; }
+  items.forEach((it, i) => {
+    const v = Number(it.valor) || 0, bh = H * v / 10, x = pad.l + gw * i + (gw - bw) / 2, y = pad.t + H - bh;
+    g += `<rect x="${x}" y="${y}" width="${bw}" height="${bh}" fill="${v >= min ? '#0284c7' : '#dc2626'}"/>${it.valor !== '' ? `<text x="${x + bw / 2}" y="${y - 2}" font-size="8" text-anchor="middle">${f2(v)}</text>` : ''}`;
+    const ty = pad.t + H + 10, tx = x + bw / 2;
+    g += largo ? `<text x="${tx}" y="${ty}" font-size="8" text-anchor="end" transform="rotate(-35 ${tx} ${ty})">${esc(String(it.nombre).slice(0, 24))}</text>` : `<text x="${tx}" y="${ty + 1}" font-size="8" text-anchor="middle">${esc(it.nombre)}</text>`;
+  });
+  const ym = pad.t + H - H * min / 10;
+  g += `<line x1="${pad.l}" x2="${w - pad.r}" y1="${ym}" y2="${ym}" stroke="#dc2626" stroke-dasharray="4 3"/><text x="${pad.l + 2}" y="${pad.t - 4}" font-size="8" fill="#dc2626">- - - nota mínima ${f2(min)}</text>`;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" font-family="Arial">${g}</svg>`;
+}
+function svgApilado(niveles, filas, titulo, w = 520) {
+  // filas: [{nombre, conteo}] barras horizontales 100% por asignatura
+  const col = COL_NIV(niveles.length), rh = 16, pad = { l: 150, r: 40, t: 22, b: 22 }, h = pad.t + pad.b + rh * filas.length, W = w - pad.l - pad.r;
+  let g = `<text x="${w / 2}" y="14" text-anchor="middle" font-size="11" font-weight="700" fill="#0c4a6e">${esc(titulo)}</text>`;
+  filas.forEach((f, i) => {
+    const tot = f.conteo.reduce((a, b) => a + b, 0), y = pad.t + i * rh;
+    g += `<text x="${pad.l - 4}" y="${y + 11}" font-size="8" text-anchor="end">${esc(String(f.nombre).slice(0, 30))}</text>`;
+    let x = pad.l;
+    f.conteo.forEach((c, k) => { const ww = tot ? W * c / tot : 0; if (ww) g += `<rect x="${x}" y="${y + 2}" width="${ww}" height="${rh - 4}" fill="${col[k]}"><title>${esc(niveles[k].codigo)}: ${c}</title></rect>${ww > 18 ? `<text x="${x + ww / 2}" y="${y + 11}" font-size="7" text-anchor="middle" fill="#fff">${Math.round(c * 100 / tot)}%</text>` : ''}`; x += ww; });
+    if (!tot) g += `<text x="${pad.l + 4}" y="${y + 11}" font-size="8" fill="#94a3b8">sin calificaciones</text>`;
+  });
+  g += niveles.map((nv, k) => `<rect x="${pad.l + k * 90}" y="${h - 12}" width="9" height="9" fill="${col[k]}"/><text x="${pad.l + k * 90 + 12}" y="${h - 4}" font-size="8">${esc(nv.codigo === 'ALC' ? 'Alcanzado' : nv.codigo === 'PRO' ? 'En proceso' : nv.codigo === 'INI' ? 'Iniciado' : nv.codigo)}</text>`).join('');
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" font-family="Arial">${g}</svg>`;
+}
+function resumenTrim(r) {
+  const nv = r.niveles || [], cods = r.filas.map(x => x.equivCod || ''), c = contar(nv, cods);
+  const conNota = r.filas.filter(x => x.nota !== '' && x.nota !== undefined);
+  const alerta = r.filas.filter(x => (x.cortesDet || []).some(d => d && d.alerta)).length;
+  const refPed = r.filas.filter(x => (x.cortesDet || []).some(d => d && d.refPed !== '')).length;
+  const mej = r.filas.filter(x => x.mejora !== '' && x.mejora != null).length;
+  const promC = (r.cortes || []).map((cc, i) => ({ nombre: cc.nombre.replace(/corte de alerta/i, 'Corte'), valor: promedio(r.filas.map(x => (x.cortesDet || [])[i] ? x.cortesDet[i].prom : '')) }));
+  promC.push({ nombre: 'Nota trimestral', valor: promedio(conNota.map(x => x.nota)) });
+  return `<div class="sec" style="margin-top:8px">Tabulación y nivel de logro del trimestre</div>
+    <div class="kpis"><div class="kpi">Promedio del curso: <b>${f2(promedio(conNota.map(x => x.nota)))}</b></div><div class="kpi">Con calificación: <b>${conNota.length}</b> de ${r.filas.length}</div>
+      <div class="kpi">Con alerta temprana: <b>${alerta}</b></div><div class="kpi">Con refuerzo pedagógico: <b>${refPed}</b></div><div class="kpi">Con mejora de la sumativa: <b>${mej}</b></div></div>
+    ${tablaTab(nv, [{ titulo: 'Nota del trimestre', conteo: c }])}
+    <div class="graf">${svgBarras(nv, [{ nombre: 'Trimestre', conteo: c }], 'Nivel de logro – ' + (r.filtros.trimestre || '') + '° trimestre')}${svgPromedios(promC, 'Promedio por corte y del trimestre', Math.max(260, 70 * promC.length), 200, r.params.notaMin)}</div>`;
+}
+function resumenAnual(r) {
+  const nv = r.niveles || [];
+  const series = [0, 1, 2].map(i => ({ nombre: (i + 1) + '° T', conteo: contar(nv, r.filas.map(x => (x.tCod || [])[i] || '')) })).concat([{ nombre: 'Anual', conteo: contar(nv, r.filas.map(x => x.promCod || '')) }]);
+  const proms = [0, 1, 2].map(i => ({ nombre: (i + 1) + '° trimestre', valor: promedio(r.filas.map(x => x.t[i])) })).concat([{ nombre: 'Anual', valor: promedio(r.filas.map(x => x.prom)) }]);
+  return `<div class="sec" style="margin-top:8px">Tabulación y nivel de logro por periodo académico</div>
+    <div class="kpis">${proms.map(p => `<div class="kpi">Promedio ${esc(p.nombre)}: <b>${p.valor === '' ? '—' : f2(p.valor)}</b></div>`).join('')}</div>
+    ${tablaTab(nv, series.map(s => ({ titulo: s.nombre, conteo: s.conteo })))}
+    <div class="graf">${svgBarras(nv, series, 'Nivel de logro por trimestre y anual', 480)}${svgPromedios(proms, 'Promedio del curso por periodo', 300, 200, r.params.notaMin)}</div>`;
+}
+function promedio(vals) { const v = vals.filter(x => x !== '' && x != null && !isNaN(Number(x))).map(Number); return v.length ? Math.floor(v.reduce((a, b) => a + b, 0) / v.length * 100) / 100 : ''; }
 function cumCortes() { cargarCortes('cum-corte', $('cum-jor').value, $('cum-trim').value); }
 async function genSeguimiento() {
   const f = { jornada: $('seg-jor').value, desde: $('seg-desde').value, hasta: $('seg-hasta').value, grado: $('seg-gra').value, paralelo: $('seg-par').value, caso: $('seg-caso').value };
@@ -1721,11 +1912,14 @@ function plCambio(cargar) {
   if (tipoA) inf.push(['cual:' + tipoA, '📘 Informe trimestral cualitativo', 'btn-primary']);
   else if (!esIni(g)) inf.push(['alertas', '⚠️ Alertas de bajo desempeño (corte)', 'btn-warn'], ['mensual', '📄 Informe mensual de insumos (corte)', 'btn-primary'],
     ['obs:TRIMESTRAL', '📘 Informe trimestral (con observaciones)', 'btn-primary'], ['obs:ANUAL', '📊 Informe anual (con observaciones)', 'btn-primary']);
-  else if (esIni(g)) inf.push(['obs:TRIMESTRAL', '🌱 Informe trimestral de destrezas (con observaciones)', 'btn-ok']);
+  else if (esIni(g)) inf.push(['obs:TRIMESTRAL', '🌱 Informe trimestral de destrezas (con observaciones)', 'btn-ok'], ['ambitos', '📊 Informe por ámbitos (tabulación y gráficos)', 'btn-primary']);
+  // v4.11: el docente con varias asignaturas en el curso (p. ej. docente de aula) puede sacar varias a la vez
+  if (!tipoA && !esIni(g) && (pf.asignaturasPorGrado[g] || []).filter(a => !esCualArt9(a)).length > 1) inf.push(['varias', '📚 Informe de varias asignaturas', 'btn-ok']);
   if (tutor) inf.push(['cual:AIA', '⭐ Informe de Acompañamiento Integral', 'btn-ok']);
   if (tutor && pf.ovpDelTutor && tipoA !== 'OVP' && [8, 9, 10].includes(ordenG(g))) inf.push(['cual:OVP', '🧭 Informe de Orientación Vocacional', 'btn-ok']);
-  $('pl-informes').innerHTML = inf.map(i => `<button onclick="${i[0].startsWith('obs:') ? `abrirObservaciones('${i[0].slice(4)}')` : (i[0].startsWith('cual:') ? `informeCual('${i[0].slice(5)}')` : `informeDocente('${i[0]}')`)}" class="btn ${i[2]}">${i[1]}</button>`).join('')
+  $('pl-informes').innerHTML = inf.map(i => `<button onclick="${i[0].startsWith('obs:') ? `abrirObservaciones('${i[0].slice(4)}')` : (i[0].startsWith('cual:') ? `informeCual('${i[0].slice(5)}')` : (i[0] === 'varias' ? 'abrirVarias()' : `informeDocente('${i[0]}')`))}" class="btn ${i[2]}">${i[1]}</button>`).join('')
     + '<p class="w-full text-[11px] text-slate-500">Las boletas de calificaciones las emite Rectorado.</p>';
+  avisoDistributivo();
   if (cargar) plCargar();
 }
 function banner(d) {
@@ -1737,6 +1931,8 @@ function banner(d) {
 async function plCargar() {
   const c = plCtx(); S.pl.ctx = c;
   $('pl-area').innerHTML = ''; $('pl-acciones').innerHTML = ''; resumenGrab();
+  const bloq = bloqueoDistributivo(c);
+  if (bloq) { $('pl-area').innerHTML = `<div class="p-5 rounded-2xl bg-red-50 border border-red-300 text-red-900 text-sm font-bold text-center leading-relaxed">${bloq}</div>`; return; }
   await run(async () => {
     if ((S.sub === 'form' || S.sub === 'ini' || S.sub === 'ref') && !c.corteId) throw new Error('Rectoría no ha configurado cortes para este trimestre.');
     if (S.sub === 'form') renderFormativa(await apiT('apiCargarFormativa', c));
@@ -1822,6 +2018,11 @@ async function guardarCualitativa() {
   const d = S.pl.data;
   const filas = d.estudiantes.map((e, i) => ({ id: e.id, valores: [...$('pl-area').querySelectorAll(`select[data-i="${i}"]`)].map(x => x.value),
     calif: (d.tipo === 'OPTATIVA' || d.tipo === 'AIA') ? $('qc-' + i).value : '', obs: $('qo-' + i).value }));
+  // v4.10: el lineamiento evalúa SIEMPRE las 9 habilidades; se avisa si alguna quedó vacía
+  if (d.tipo === 'AIA') {
+    const inc = filas.filter(f => f.valores.some(v => v) && f.valores.some(v => !v)).length;
+    if (inc && !confirm(`${inc} estudiante(s) tienen habilidades sin registrar. El lineamiento evalúa siempre las 9 habilidades (si no hubo observaciones, corresponde "Frecuentemente"). ¿Guardar de todas formas?`)) return;
+  }
   let ok = false;
   await run(async () => { const r = await apiT('apiGuardarCualitativa', S.pl.ctx, d.tipo, filas); toast(r.mensaje, 'ok'); ok = true; });
   if (ok) plCargar();
@@ -2139,6 +2340,25 @@ async function guardarObsYGenerar() {
   await run(async () => mostrarReporte(await apiT('apiReporte', o.tipo === 'ANUAL' ? 'anual_asig' : 'trimestral', c)));
 }
 
+function abrirVarias() {
+  const c = plCtx(), l = (S.cat.perfil.asignaturasPorGrado[c.grado] || []).filter(a => !esCualArt9(a));
+  $('mv-asig').innerHTML = l.map(a => `<label class="flex gap-1 items-center"><input type="checkbox" value="${esc(a)}" checked> ${esc(a)}</label>`).join('');
+  $('mv-curso').textContent = `${c.jornada} · ${c.grado} · Paralelo ${c.paralelo} · ${c.trimestre}° trimestre`;
+  abrirModal('m-varias');
+}
+async function genVarias() {
+  const sel = [...$('mv-asig').querySelectorAll('input:checked')].map(i => i.value), tipo = $('mv-tipo').value;
+  if (!sel.length) return toast('Elija al menos una asignatura.', 'err');
+  const base = plCtx(), partes = [];
+  await run(async () => {
+    for (const a of sel) {
+      mostrarReporte(await apiT('apiReporte', tipo, Object.assign({}, base, { asignatura: a })));
+      partes.push($('print-area').innerHTML);
+    }
+    $('print-area').innerHTML = partes.map((h, i) => `<div style="${i < partes.length - 1 ? 'break-after:page;page-break-after:always' : ''}">${h}</div>`).join('');
+    cerrarModal('m-varias');
+  });
+}
 async function informeDocente(tipo) {
   const c = plCtx();
   if (esIni(c.grado)) c.asignatura = 'Destrezas (Docente de Aula)';
@@ -2190,10 +2410,15 @@ function mostrarReporte(r) {
     h += firmas([[r.docente, 'Docente de asignatura', 'REALIZADO'], vice(r)]) + norma(r);
   } else if (r.tipo === 'trimestral') {
     orient = 'landscape';
-    const filas = r.filas.map((x, n) => `<tr class="${x.nota !== '' && x.nota !== undefined && x.nota < r.params.notaMin ? 'alerta' : ''}"><td class="c">${n + 1}</td><td>${esc(x.nombres)}</td><td class="c">${x.total || 0}</td><td class="c">${f2(x.promF)}</td><td class="c">${f2(x.pF)}</td><td class="c">${f2(x.sum)}</td><td class="c">${f2(x.mejora)}${x.tipoMejora ? `<br><small>${x.tipoMejora === 'DIRECTA' ? 'directa' : 'con refuerzo'}</small>` : ''}</td><td class="c">${f2(x.sumEf)}</td><td class="c">${f2(x.pS)}</td><td class="c b">${f2(x.nota)}</td><td>${esc(x.equiv || '')}</td><td>${esc(x.obs || '')}</td></tr>`);
+    // v4.10: detalle por corte (promedio inicial · ⚠ alerta · R refuerzo pedagógico aplicado)
+    const nC = (r.cortes || []).length;
+    const celCorte = d => !d ? '<td class="c">—</td>' : `<td class="c">${f2(d.prom)}${d.alerta ? ' ⚠' : ''}${d.refPed !== '' ? `<br><small>R ${f2(d.refPed)}</small>` : (d.conRef ? `<br><small>${d.conRef} ins. ref.</small>` : '')}</td>`;
+    const filas = r.filas.map((x, n) => `<tr class="${x.nota !== '' && x.nota !== undefined && x.nota < r.params.notaMin ? 'alerta' : ''}"><td class="c">${n + 1}</td><td>${esc(x.nombres)}</td>${(x.cortesDet || []).map(celCorte).join('')}<td class="c">${x.total || 0}</td><td class="c">${f2(x.promF)}</td><td class="c">${f2(x.pF)}</td><td class="c">${f2(x.sum)}</td><td class="c">${f2(x.mejora)}${x.tipoMejora ? `<br><small>${x.tipoMejora === 'DIRECTA' ? 'directa' : 'con refuerzo'}</small>` : ''}</td><td class="c">${f2(x.sumEf)}</td><td class="c">${f2(x.pS)}</td><td class="c b">${f2(x.nota)}</td><td>${esc(x.equiv || '')}</td><td>${esc(x.obs || '')}</td></tr>`);
     h = encabezado(r, `Informe trimestral de calificaciones – ${F.trimestre}° trimestre`, 'Resultados cuantitativos y su equivalencia cualitativa') +
       ficha([['Jornada', F.jornada], ['Curso', curso], ['Asignatura', F.asignatura], ['Docente', r.docente], ['Cortes incluidos', r.cortes.map(c => c.nombre).join(', ')]]) +
-      tabla(['N°', 'Estudiante', 'Total insumos', 'Prom. formativo', `Formativo ${r.params.pf}%`, 'Sumativa', 'Mejora', 'Sumativa efectiva', `Sumativo ${r.params.ps}%`, 'Nota trimestral', 'Equivalencia cualitativa', 'Observación'], filas) +
+      tabla(['N°', 'Estudiante'].concat((r.cortes || []).map(c => c.nombre), ['Total insumos', 'Prom. formativo', `Formativo ${r.params.pf}%`, 'Sumativa', 'Mejora', 'Sumativa efectiva', `Sumativo ${r.params.ps}%`, 'Nota trimestral', 'Equivalencia cualitativa', 'Observación']), filas) +
+      `<div style="font-size:9px;margin-top:3px">Cortes: promedio inicial del corte · ⚠ alerta temprana · R = promedio con refuerzo pedagógico (hasta ${f2(r.params.topeRef)}) · "ins. ref." = insumos con refuerzo.</div>` +
+      resumenTrim(r) +
       (r.obsGeneral ? `<table><tr><th style="width:22%">Observación general</th><td>${esc(r.obsGeneral)}</td></tr></table>` : '') +
       firmas([[r.docente, 'Docente de asignatura', 'REALIZADO'], vice(r)]) + norma(r);
   } else if (r.tipo === 'anual_asig') {
@@ -2202,8 +2427,43 @@ function mostrarReporte(r) {
     h = encabezado(r, 'Informe anual de la asignatura', 'Promedio simple de los tres trimestres (Art. 36)') +
       ficha([['Jornada', F.jornada], ['Curso', curso], ['Asignatura', F.asignatura], ['Docente', r.docente]]) +
       tabla(['N°', 'Estudiante', '1T', '2T', '3T', 'Promedio anual', 'Equivalencia cualitativa', 'Condición (Art. 20-27)', 'Observación'], filas) +
+      resumenAnual(r) +
       (r.obsGeneral ? `<table><tr><th style="width:22%">Observación general</th><td>${esc(r.obsGeneral)}</td></tr></table>` : '') +
       firmas([[r.docente, 'Docente de asignatura', 'REALIZADO'], vice(r)]) + norma(r);
+  } else if (r.tipo === 'ambitos') {
+    // v4.11: Inicial y Preparatoria por ámbitos (bandas del Art. 7)
+    orient = 'landscape';
+    const nv = [{ codigo: 'ALC', nombre: 'Alcanzado (A+ a B-)', letras: [] }, { codigo: 'PRO', nombre: 'En proceso (C+ y C-)', letras: [] }, { codigo: 'INI', nombre: 'Iniciado (D+ a E-)', letras: [] }];
+    const pct = (c, i) => { const t = c[0] + c[1] + c[2]; return t ? (c[i] * 100 / t).toFixed(0) + '%' : '—'; };
+    const bloques = r.ambitos.map(a => `<table><thead><tr><th colspan="9" style="text-align:left">ÁMBITO: ${esc(a.nombre)}</th></tr>
+      <tr><th>Corte</th><th style="text-align:left">Destreza</th><th>Alcanzado</th><th>%</th><th>En proceso</th><th>%</th><th>Iniciado</th><th>%</th><th>No evaluada</th></tr></thead><tbody>
+      ${a.destrezas.map(d => `<tr class="${d.conteo[2] > d.conteo[0] ? 'alerta' : ''}"><td class="c">${esc(d.corte)}</td><td>${esc(d.desc)}</td><td class="c">${d.conteo[0]}</td><td class="c">${pct(d.conteo, 0)}</td><td class="c">${d.conteo[1]}</td><td class="c">${pct(d.conteo, 1)}</td><td class="c">${d.conteo[2]}</td><td class="c">${pct(d.conteo, 2)}</td><td class="c">${d.conteo[3]}</td></tr>`).join('')}
+      <tr><td colspan="2" class="b">Total del ámbito</td><td class="c b">${a.conteo[0]}</td><td class="c b">${pct(a.conteo, 0)}</td><td class="c b">${a.conteo[1]}</td><td class="c b">${pct(a.conteo, 1)}</td><td class="c b">${a.conteo[2]}</td><td class="c b">${pct(a.conteo, 2)}</td><td class="c b">${a.conteo[3]}</td></tr></tbody></table>`).join('');
+    const filasG = r.ambitos.map(a => ({ nombre: a.nombre, conteo: a.conteo.slice(0, 3) }));
+    const tot = filasG.reduce((t, a) => t.map((x, i) => x + a.conteo[i]), [0, 0, 0]);
+    h = encabezado(r, `Informe por ámbitos – ${F.trimestre}° trimestre`, 'Educación Inicial y Preparatoria · Bandas del Art. 7: alcanzado, en proceso de desarrollo, iniciado') +
+      ficha([['Jornada', F.jornada], ['Curso', curso], ['Docente', r.tutor], ['Estudiantes', r.estudiantes]]) +
+      (r.ambitos.length ? bloques + `<div class="sec" style="margin-top:8px">Resumen del trimestre</div>` + tablaTab(nv, [{ titulo: 'Valoraciones de destrezas', conteo: tot }]) +
+        `<div class="graf">${svgApilado(nv, filasG, 'Nivel de logro por ámbito', 600)}${svgBarras(nv, [{ nombre: 'Trimestre', conteo: tot }], 'Total de valoraciones del trimestre', 360)}</div>` +
+        `<div style="font-size:9px;margin-top:3px">Las destrezas resaltadas tienen más estudiantes en "Iniciado" que en "Alcanzado".</div>`
+        : '<p>No hay destrezas registradas en este trimestre.</p>') +
+      firmas([[r.tutor, 'Docente', 'REALIZADO'], vice(r)]) + norma(r);
+  } else if (r.tipo === 'curso_asignaturas') {
+    // v4.10: informe del curso con todas las asignaturas (Vicerrectorado / Rectorado)
+    orient = 'landscape';
+    const A = r.asignaturas, nv = r.niveles, cod = (x, c) => r.cualitativa ? (c || '') : f2(x);
+    const filas = r.filas.map((x, n) => `<tr><td class="c">${n + 1}</td><td>${esc(x.nombres)}</td>${x.notas.map((v, i) => `<td class="c ${v !== '' && nivelDe(nv, x.cods[i]) >= nv.length - 2 && !r.cualitativa && v < r.params.notaMin ? 'alerta' : ''}">${v === '' ? '—' : cod(v, x.cods[i])}</td>`).join('')}<td class="c b">${x.prom === '' ? '—' : cod(x.prom, x.promCod)}</td></tr>`);
+    filas.push(`<tr><td colspan="2" class="b c">PROMEDIO DE LA ASIGNATURA</td>${A.map((a, i) => { const p = promedio(r.filas.map(x => x.notas[i])); return `<td class="c b">${p === '' ? '—' : f2(p)}</td>`; }).join('')}<td class="c b">${f2(promedio(r.filas.map(x => x.prom)))}</td></tr>`);
+    const porAsig = A.map((a, i) => ({ nombre: a, conteo: contar(nv, r.filas.map(x => x.cods[i])), prom: promedio(r.filas.map(x => x.notas[i])) }));
+    const tab = `<table><thead><tr><th style="text-align:left">Asignatura</th><th>Promedio</th>${nv.map(n => `<th>${esc(n.codigo === 'ALC' ? 'Alcanzado' : n.codigo === 'PRO' ? 'En proceso' : n.codigo === 'INI' ? 'Iniciado' : n.codigo)}</th>`).join('')}<th>Con nota</th><th>% en los niveles más bajos</th></tr></thead><tbody>
+      ${porAsig.map(p => { const t = p.conteo.reduce((a, b) => a + b, 0), bajos = p.conteo.slice(-2).reduce((a, b) => a + b, 0); return `<tr class="${t && bajos / t >= 0.3 ? 'alerta' : ''}"><td>${esc(p.nombre)}</td><td class="c b">${p.prom === '' ? '—' : f2(p.prom)}</td>${p.conteo.map(c => `<td class="c">${c}</td>`).join('')}<td class="c">${t}</td><td class="c">${t ? (bajos * 100 / t).toFixed(1) + '%' : '—'}</td></tr>`; }).join('')}</tbody></table>`;
+    h = encabezado(r, `Calificaciones del curso – todas las asignaturas`, r.periodoTxt) +
+      ficha([['Jornada', F.jornada], ['Curso', curso], ['Docente tutor/a', r.tutor], ['Estudiantes', r.filas.length]]) +
+      tabla(['N°', 'Estudiante'].concat(A, ['Promedio']), filas) +
+      `<div class="sec" style="margin-top:8px">Tabulación por asignatura – nivel de logro</div>` + tab +
+      `<div class="graf">${svgApilado(nv, porAsig, 'Nivel de logro por asignatura', 560)}${svgPromedios(porAsig.map(p => ({ nombre: p.nombre, valor: p.prom })), 'Promedio por asignatura', Math.max(300, 46 * A.length), 210, r.params.notaMin)}</div>` +
+      `<div style="font-size:9px;margin-top:3px">Las filas resaltadas son asignaturas con 30 % o más de estudiantes en los dos niveles más bajos.</div>` +
+      firmas([[r.vicerrector || r.inst.rectora, r.vicerrector ? 'Vicerrector/a – Jornada ' + F.jornada : 'Rectora', 'REVISADO'], [r.tutor, 'Docente tutor/a', '']]) + norma(r);
   } else if (r.tipo === 'trimestral_inicial') {
     orient = 'landscape';
     const filas = r.filas.map((x, n) => `<tr><td class="c">${n + 1}</td><td>${esc(x.nombres)}</td>${x.estados.map(e => `<td class="c">${e ? esc(e + ' – ' + (bandaL(e) || INI_TXT[e] || '')) : '—'}</td>`).join('')}<td>${esc(x.obs)}</td></tr>`);
@@ -2280,40 +2540,87 @@ function mostrarReporte(r) {
       tabla(['N°', 'Docente', 'Curso', 'Asignatura', 'Estudiantes', 'Con registro', 'Último registro', 'Estado'], filas) +
       firmas([[r.vicerrector || r.inst.rectora, r.vicerrector ? 'Vicerrector/a – Jornada ' + F.jornada : 'Rectora']]) + norma(r);
   } else if (r.tipo === 'boleta2') {
+    // v4.9: dos boletas A5 por hoja A4 horizontal (opción de la ventana de boletas)
+    window.paresA4 = pags => {
+      if (S.boPapel !== 'A4x2') return pags.join('');
+      let o = '';
+      for (let i = 0; i < pags.length; i += 2) o += `<div class="hoja2">${pags[i]}${pags[i + 1] || ''}</div>`;
+      return o;
+    };
+    // v4.8: la leyenda muestra SOLO las equivalencias que aparecen en las calificaciones de ese estudiante
+    window.leyendaUsada = (r, b) => {
+      const BANDAS = [[['A+', 'A-', 'B+', 'B-'], 'Destreza o aprendizaje alcanzado'], [['C+', 'C-'], 'En proceso de desarrollo'], [['D+', 'D-', 'E+', 'E-'], 'Iniciado']];
+      const OVP_TXT = { 'A+': 'Siempre', 'A-': 'Frecuentemente', 'B+': 'Ocasionalmente' };
+      const nums = [], lAsig = new Set(), lCual = new Set(), lAIA = new Set(), lOVP = new Set();
+      const tomar = (v, setL) => { if (v === '' || v == null) return; const n = typeof v === 'number' ? v : (/^\d+([.,]\d+)?$/.test(String(v)) ? Number(String(v).replace(',', '.')) : null); if (n !== null) nums.push(n); else setL.add(String(v).trim()); };
+      b.filas.forEach(x => x.t.concat([x.prom]).forEach(v => tomar(v, lAsig)));
+      (b.promGen || []).forEach(v => tomar(v, lAsig));
+      (b.optativas || []).forEach(x => x.t.forEach(v => tomar(v, lCual)));
+      (b.periodos || []).forEach(x => x.t.forEach(v => tomar(v, /orientaci/i.test(x.asignatura) ? lOVP : (/acompa/i.test(x.asignatura) ? lAIA : lCual))));
+      (b.comportamiento || []).forEach(v => tomar(v, lAIA));
+      const bandas = set => BANDAS.map(([ls, t]) => { const u = ls.filter(l => set.has(l)); return u.length ? `${u.join(' ')} = ${t}` : ''; }).filter(Boolean);
+      const out = [];
+      if (r.cualitativa) { const t = bandas(lAsig); if (t.length) out.push(['Escala de calificaciones', t.join('<br>')]); }
+      else {
+        const usados = (r.escalaCuant || []).filter(e => nums.some(n => n >= e.desde - 1e-9 && n <= e.hasta + 1e-9));
+        if (usados.length) out.push(['Escala de calificaciones', usados.map(e => `${f2(e.desde)}–${f2(e.hasta)} = ${esc(e.codigo)} (${esc(e.desc)})`).join('<br>')]);
+      }
+      // v4.9: la descripción del comportamiento ya va en su propia sección
+      const cual = bandas(lCual).concat([...lOVP].filter(l => OVP_TXT[l]).map(l => `Orientación Vocacional: ${l} = ${OVP_TXT[l]}`));
+      if (cual.length) out.push(['Escala cualitativa', cual.join('<br>')]);
+      return out;
+    };
     const T = r.trimestre, ths = ['1° Trimestre', '2° Trimestre', '3° Trimestre'];
     const celda = v => `<td class="c">${v === '' || v == null ? '' : (typeof v === 'number' ? f2(v) : esc(v))}</td>`;
     const leyendaCuant = r.cualitativa
       ? 'A+ A- B+ B- = Destreza o aprendizaje alcanzado · C+ C- = En proceso de desarrollo · D+ D- E+ E- = Iniciado (Art. 7)'
       : (r.escalaCuant || []).map(e => `${f2(e.desde)}–${f2(e.hasta)} = ${e.codigo} (${e.desc})`).join(' · ');
-    h = r.boletas.map(b => {
-      const filas = b.filas.map(x => `<tr><td>${esc(x.area)}</td><td>${esc(x.asignatura)}</td>${x.t.map(celda).join('')}${celda(x.prom)}<td>${esc(x.obs)}</td></tr>`);
+    h = paresA4(r.boletas.map(b => {
+      // v4.9: el Área se combina verticalmente cuando agrupa varias asignaturas seguidas
+      const filas = b.filas.map((x, i) => {
+        let area = '';
+        if (i === 0 || b.filas[i - 1].area !== x.area) { let n = 1; while (b.filas[i + n] && b.filas[i + n].area === x.area) n++; area = `<td${n > 1 ? ` rowspan="${n}" style="vertical-align:middle"` : ''}>${esc(x.area)}</td>`; }
+        return `<tr>${area}<td>${esc(x.asignatura)}</td>${x.t.map(celda).join('')}${celda(x.prom)}<td>${esc(x.obs)}</td></tr>`;
+      });
       filas.push(`<tr><td colspan="2" class="b c">PROMEDIO GENERAL</td>${b.promGen.map(v => `<td class="c b">${v === '' ? '' : (typeof v === 'number' ? f2(v) : esc(v))}</td>`).join('')}<td></td><td></td></tr>`);
       if (b.optativas.length) {
         filas.push(`<tr><th colspan="7" style="text-align:left">ASIGNATURAS OPTATIVAS (cualitativas – no se promedian ni son requisito de promoción, Art. 9)</th></tr>`);
         b.optativas.forEach(x => filas.push(`<tr><td>Optativa</td><td>${esc(x.asignatura)}</td>${x.t.map(celda).join('')}<td class="c">—</td><td>${esc(x.obs || '')}</td></tr>`));
       }
-      filas.push(`<tr><th colspan="7" style="text-align:left">PERIODOS PEDAGÓGICOS (cualitativos – no se promedian, Art. 9)</th></tr>`);
-      b.periodos.forEach(x => filas.push(`<tr><td>Periodo pedagógico</td><td>${esc(x.asignatura)}</td>${x.t.map(celda).join('')}<td class="c">—</td><td>${esc(x.obs || '')}</td></tr>`));
+      if (b.periodos.length) {
+        filas.push(`<tr><th colspan="7" style="text-align:left">PERIODOS PEDAGÓGICOS (cualitativos – no se promedian, Art. 9)</th></tr>`);
+        b.periodos.forEach(x => filas.push(`<tr><td colspan="2">${esc(x.asignatura)}</td>${x.t.map(celda).join('')}<td class="c">—</td><td>${esc(x.obs || '')}</td></tr>`));
+      }
       const fil = (nom, fn) => `<tr><td class="b">${nom}</td>${[0, 1, 2].map(i => `<td class="c">${i < T ? esc(fn(i)) : ''}</td>`).join('')}</tr>`;
       const as = b.asistencia;
-      const tab2 = `<table><thead><tr><th style="width:34%"></th><th>1° T</th><th>2° T</th><th>3° T</th></tr></thead><tbody>
-        ${fil('Comportamiento', i => b.comportamiento[i] || '')}
+      // v4.9: Acompañamiento Integral (9 habilidades) y Comportamiento (letra + descripción) en secciones propias
+      // v4.10: Acompañamiento Integral con colores (S verde, F azul, O amarillo, N rojo)
+      const SF = { Siempre: 'S', Frecuentemente: 'F', Ocasionalmente: 'O', Nunca: 'N' };
+      const chip = v => v ? `<span class="sfon sf-${SF[v] || ''}">${SF[v] || esc(v)}</span>` : '';
+      const tabAIA = `<table class="t3"><thead><tr><th style="width:46%;text-align:left">ACOMPAÑAMIENTO INTEGRAL EN EL AULA</th><th>1° T</th><th>2° T</th><th>3° T</th></tr></thead><tbody>
+        ${(b.aia || []).map(h => `<tr><td>${esc(h.habilidad)}</td>${[0, 1, 2].map(i => `<td class="c">${i < T ? chip(h.t[i]) : ''}</td>`).join('')}</tr>`).join('')}
+        <tr><td colspan="4" style="font-size:.85em"><span class="sfon sf-S">S</span> Siempre · <span class="sfon sf-F">F</span> Frecuentemente · <span class="sfon sf-O">O</span> Ocasionalmente · <span class="sfon sf-N">N</span> Nunca</td></tr></tbody></table>`;
+      const descC = [0, 1, 2].filter(i => i < T && b.comportamiento[i]).map(i => `<b>${i + 1}° T – ${esc(b.comportamiento[i])}:</b> ${esc((b.compDesc || [])[i] || '')}`);
+      const tabComp = `<table class="t3"><thead><tr><th style="width:46%;text-align:left">COMPORTAMIENTO</th><th>1° T</th><th>2° T</th><th>3° T</th></tr></thead><tbody>
+        ${fil('Calificación', i => b.comportamiento[i] || '')}
+        ${descC.length ? `<tr><td colspan="4" style="font-size:.9em">${descC.join('<br>')}</td></tr>` : ''}
+</tbody></table>`;
+      const tab2 = `<table class="t3"><thead><tr><th style="width:46%;text-align:left">ASISTENCIA</th><th>1° T</th><th>2° T</th><th>3° T</th></tr></thead><tbody>
         ${fil('Días laborados', i => as[i] ? as[i].dias : '')}
         ${fil('Días asistidos', i => as[i] ? as[i].asistidos : '')}
         ${fil('Faltas justificadas', i => as[i] ? as[i].fj : '')}
         ${fil('Faltas injustificadas', i => as[i] ? as[i].fi : '')}
         ${fil('Atrasos', i => as[i] ? as[i].at : '')}</tbody></table>`;
-      const leyAIA = Object.entries(r.descAIA || {}).map(([k, v]) => `${k} = ${esc(v)}`).join('<br>');
+      const ley = leyendaUsada(r, b);
       return `<div class="pagina">${encabezado(r, 'Boleta de calificaciones', `${T}° trimestre – Año lectivo ${esc(r.inst.periodo)}`)}
         ${ficha([['Estudiante', b.nombres], ['Cédula', b.cedula], ['Año / curso', F.grado], ['Paralelo', F.paralelo], ['Jornada', F.jornada], ['Subnivel', r.subnivel], ['Docente tutor/a', r.tutor]])}
-        ${tabla(['Área', 'Asignaturas'].concat(ths, ['Promedio anual', 'Observaciones']), filas)}
-        ${tab2}
-        ${b.compObs ? `<table><tr><th style="width:34%">Descripción del comportamiento</th><td>${esc(b.compObs)}</td></tr></table>` : ''}
-        <table style="font-size:8.5px"><thead><tr><th style="width:38%">Escala de calificaciones</th><th style="width:37%">Comportamiento / Acompañamiento Integral</th><th>Escala cualitativa</th></tr></thead><tbody><tr>
-          <td>${esc(leyendaCuant)}</td><td>${leyAIA}</td>
-          <td>A+ A- B+ B- = Destreza o aprendizaje alcanzado<br>C+ C- = En proceso de desarrollo<br>D+ D- E+ E- = Iniciado<br>Orientación Vocacional: A+ Siempre · A- Frecuentemente · B+ Ocasionalmente</td></tr></tbody></table>
+        <div class="bol2c"><div class="izq">${tabla(['Área', 'Asignaturas'].concat(['1° T', '2° T', '3° T'], ['Prom. anual', 'Observaciones']), filas)}</div>
+          <div class="der">${tabAIA}${tabComp}${tab2}</div></div>
+        <table style="margin-top:5px"><tr><th style="text-align:left">OBSERVACIONES DEL DOCENTE TUTOR/A</th></tr>
+          <tr><td style="height:9mm;vertical-align:top">${esc(b.compObs || '')}</td></tr></table>
+        ${ley.length ? `<table class="leyenda"><thead><tr>${ley.map(c => `<th style="width:${Math.floor(100 / ley.length)}%">${c[0]}</th>`).join('')}</tr></thead><tbody><tr>${ley.map(c => `<td>${c[1]}</td>`).join('')}</tr></tbody></table>` : ''}
         ${firmas([[r.inst.rectora, 'Rectora'], [r.tutor, 'Docente tutor/a'], ['', 'Padre, madre o representante']])}${norma(r)}</div>`;
-    }).join('') || '<p>No hay estudiantes.</p>';
+    })) || '<p>No hay estudiantes.</p>';
   } else if (r.tipo === 'alertas_asistencia') {
     orient = 'landscape';
     const col = { ROJA: '#dc2626', NARANJA: '#f97316', AMARILLA: '#facc15' };
@@ -2352,7 +2659,11 @@ function mostrarReporte(r) {
       tabla(['N°', 'Cédula', 'Apellidos y nombres', 'Jornada', 'Curso', 'Repetidor', 'Origen', 'NEE', 'NAP', 'Representante', 'Teléfono'], filas) +
       firmas([[r.inst.rectora, 'Rectora'], ['', 'Secretaría']]) + norma(r);
   }
-  $('page-size').textContent = `@page{size:A4 ${orient};margin:10mm}`;
+  // v4.8: las boletas se imprimen en A5 vertical; los demás informes siguen en A4
+  const a5 = ['boleta2', 'boleta', 'ficha_inicial'].includes(r.tipo), dos = a5 && r.tipo === 'boleta2' && S.boPapel === 'A4x2';
+  $('page-size').textContent = dos ? '@page{size:A4 portrait;margin:0}' : (a5 ? (r.tipo === 'boleta2' ? '@page{size:A5 landscape;margin:6mm}' : '@page{size:A5 portrait;margin:6mm}') : `@page{size:A4 ${orient};margin:10mm}`);
+  $('print-area').classList.toggle('a5', a5);
+  $('print-area').classList.toggle('a4x2', dos);
   $('print-area').innerHTML = h;
   $('v-app').classList.add('hidden'); $('v-print').classList.remove('hidden');
   window.scrollTo(0, 0);
