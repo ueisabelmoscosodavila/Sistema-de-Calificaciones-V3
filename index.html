@@ -111,6 +111,7 @@
         <span id="b-rol" class="text-[11px] text-sky-800 font-bold uppercase"></span>
       </div>
       <button onclick="abrirModal('m-clave')" class="btn btn-sec">🔑 Clave</button>
+      <button id="b-cambiarol" onclick="abrirRoles()" class="btn bg-violet-50 text-violet-800 border border-violet-200 hidden">🔄 Cambiar rol</button>
       <button onclick="salir()" class="btn bg-red-50 text-red-700 border border-red-200">Salir</button>
     </div>
   </header>
@@ -282,7 +283,8 @@
         <button id="mlb-curso" onclick="verMalla('curso')" class="btn btn-sec">🏫 Revisión por curso</button>
         <button id="mlb-planta" onclick="verMalla('planta')" class="btn btn-sec">🖨️ Planta docente</button>
         <button id="mlb-oferta" onclick="verMalla('oferta')" class="btn btn-sec">🗂️ Cursos por jornada</button>
-        <button id="mlb-malla" onclick="verMalla('malla')" class="btn btn-sec">📚 Malla curricular</button></div>
+        <button id="mlb-malla" onclick="verMalla('malla')" class="btn btn-sec">📚 Malla curricular</button>
+        <button id="mlb-consulta" onclick="verMalla('consulta')" class="btn btn-sec">🔎 Consultar docentes y comisiones</button></div>
       <div id="mlv-malla" class="hidden space-y-2">
         <div class="flex flex-wrap items-end gap-2"><div><label class="lbl">Año de básica / curso</label><select id="ml-gra" class="inp" onchange="cargarMalla()"></select></div><div id="ml-tot" class="text-[11px]"></div></div>
         <div id="ml-area"></div>
@@ -312,6 +314,18 @@
         </div>
         <div id="asg-area"></div>
         <div id="dd-area"></div>
+        <div id="dd-com"></div>
+      </div>
+      <div id="mlv-consulta" class="hidden space-y-2">
+        <div class="grid grid-cols-2 sm:grid-cols-6 gap-2 items-end bg-sky-50 p-3 rounded-2xl border border-sky-100">
+          <div><label class="lbl">Jornada</label><select id="cs-jor" class="inp"></select></div>
+          <div><label class="lbl">Año de básica / curso</label><select id="cs-gra" class="inp"></select></div>
+          <div><label class="lbl">Paralelo</label><select id="cs-par" class="inp"></select></div>
+          <div class="col-span-2 sm:col-span-1"><label class="lbl">Comisión</label><select id="cs-com" class="inp"></select></div>
+          <button onclick="consultarDocentes()" class="btn btn-primary">🔎 Buscar</button>
+          <div class="flex gap-1"><button onclick="consultarDocentes('imprimir')" class="btn btn-sec">🖨️</button><button onclick="consultarDocentes('excel')" class="btn btn-ok">⬇️ Excel</button></div>
+        </div>
+        <div id="cs-area"></div>
       </div>
       <div id="mlv-oferta" class="hidden space-y-2">
         <p class="text-[11px] text-slate-600">Marque los años de básica / cursos y paralelos que existen en cada jornada. Solo esos aparecerán al asignar, y el sistema avisa si se intenta asignar en un curso que no existe.</p>
@@ -494,6 +508,16 @@
     </div>
     <div id="print-area" class="bg-white p-6 rounded-2xl border rep"></div>
   </section>
+</div>
+
+<!-- MODAL DOBLE ROL (v4.16) -->
+<div id="m-rol" class="hidden fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50">
+  <div class="bg-white max-w-sm w-full p-5 rounded-3xl space-y-3 text-xs">
+    <h3 class="font-black text-sm">👤 ¿Con qué rol desea ingresar?</h3>
+    <p class="text-slate-600">Usted tiene funciones de autoridad y también dicta clases. Puede cambiar de rol cuando quiera con el botón <b>🔄 Cambiar rol</b> de la parte superior.</p>
+    <div id="rol-ops" class="space-y-2"></div>
+    <button id="rol-cancel" onclick="cerrarModal('m-rol')" class="btn btn-sec w-full">Cancelar</button>
+  </div>
 </div>
 
 <!-- MODAL CLAVE -->
@@ -911,13 +935,37 @@ async function login() {
     if (!r.success) { er.textContent = r.mensaje; er.classList.remove('hidden'); return; }
     S.token = r.token; S.ses = r.sesion; $('lg-p').value = ''; $('lg-p').type = 'password';
     S.cat = r.catalogos || await apiT('apiCatalogos'); // v4.7: normalmente ya viene con el inicio de sesión
+    S.roles = r.roles || [];
+    if (S.roles.length > 1) { abrirRoles(true); return; } // v4.16: doble rol → elegir con qué rol ingresar
     iniciarApp();
   });
 }
 
+// ---- v4.16: doble rol (autoridad que también es docente) ----
+const ICO_ROL = r => r === 'DOCENTE' ? '📝' : (/INSPEC/.test(r) ? '🚨' : '🏫');
+function abrirRoles(alIngresar) {
+  $('rol-ops').innerHTML = (S.roles || []).map(r => `<button onclick="elegirRol('${r.rol}')" class="btn ${S.ses && r.rol === S.ses.rol && !alIngresar ? 'btn-sec' : 'btn-primary'} w-full justify-start text-left">
+    ${ICO_ROL(r.rol)} ${r.rol === 'DOCENTE' ? 'Docente – registrar calificaciones' : esc(r.cargo) + ' – funciones administrativas'}${S.ses && r.rol === S.ses.rol && !alIngresar ? ' (actual)' : ''}</button>`).join('');
+  $('rol-cancel').classList.toggle('hidden', !!alIngresar);
+  abrirModal('m-rol');
+}
+async function elegirRol(rol) {
+  cerrarModal('m-rol');
+  if (S.ses && rol === S.ses.rol) { if ($('v-app').classList.contains('hidden')) iniciarApp(); return; }
+  await run(async () => {
+    const r = await apiT('apiCambiarRol', rol);
+    S.token = r.token; S.ses = r.sesion; S.roles = r.roles || S.roles;
+    S.cat = r.catalogos || await apiT('apiCatalogos');
+    S.pl = {}; S.sub = 'form'; S.mallaVista = null;
+    $('v-print').classList.add('hidden');
+    iniciarApp();
+    toast('Ahora está trabajando como: ' + (S.ses.rol === 'DOCENTE' ? 'Docente' : S.ses.cargo), 'ok');
+  });
+}
 function salir(silencioso) {
   if (S.token && !silencioso) api('apiCerrarSesion', S.token).catch(() => {});
-  S.token = null; S.ses = null; S.cat = null;
+  S.token = null; S.ses = null; S.cat = null; S.roles = [];
+  $('b-cambiarol').classList.add('hidden');
   $('v-app').classList.add('hidden'); $('v-print').classList.add('hidden'); $('v-login').classList.remove('hidden');
   $('badge').classList.add('hidden'); $('badge').classList.remove('flex');
 }
@@ -927,6 +975,7 @@ function iniciarApp() {
   $('badge').classList.remove('hidden'); $('badge').classList.add('flex');
   $('b-nombre').textContent = S.ses.nombre;
   $('b-rol').textContent = S.ses.cargo + (S.ses.rol === 'DOCENTE' ? ' · ' + S.ses.jornada : '');
+  $('b-cambiarol').classList.toggle('hidden', !(S.roles && S.roles.length > 1));
   const R = S.ses.rol;
   const tabs = R === 'DOCENTE' ? [['planilla', '📝 Mis calificaciones']]
     : R === 'RECTORA' ? [['estudiantes', '🎒 Estudiantes'], ['docentes', '👨‍🏫 Docentes'], ['optativas', '🎓 Optativas BGU'], ['periodos', '📅 Fechas, cortes y bloqueos'], ['informes', '📊 Informes'], ['seguimiento', '⚠️ Seguimiento y cumplimiento'], ['inasistencias', '🚨 Inasistencias'], ['efb', '🎓 Evaluación final de Bachillerato'], ['malla', '📋 Distributivo'], ['institucion', '🏫 Institución'], ['cierre', '🎓 Cierre del año']]
@@ -1353,7 +1402,7 @@ async function cargarInstitucion() {
       <div class="font-bold">${esc(d.cargo)} <span class="font-mono text-sky-800">(${esc(d.usuario)})</span></div>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-1">
         <input id="dir-${d.rol}" class="inp" value="${esc(d.nombre)}" placeholder="Nombre con título">
-        <input id="dirc-${d.rol}" class="inp font-mono" value="${esc(d.cedula)}" placeholder="Cédula">
+        <input id="dirc-${d.rol}" class="inp font-mono" value="${esc(d.cedula)}" placeholder="Cédula" title="Si esta autoridad también dicta clases, use la MISMA cédula de su ficha de docente: así podrá cambiar entre el rol administrativo y el de docente.">
         <input id="dire-${d.rol}" class="inp" value="${esc(d.correo)}" placeholder="Correo"></div>
       <div class="flex gap-1 justify-end"><button onclick="guardarDirectivo('${d.rol}')" class="btn btn-sec">💾 Guardar</button>
       <button onclick="resetDirectivo('${d.rol}')" title="Nueva contraseña" class="btn btn-sec">🔑 Nueva clave</button></div></div>`).join('');
@@ -1492,7 +1541,71 @@ function asgDocente() {
   if (!d) { $('asg-area').innerHTML = ''; $('dd-area').innerHTML = ''; return; }
   const js = (d.jornada === 'Ambas' ? ['Matutina', 'Vespertina'] : [d.jornada]).filter(j => !S.cat.jornadaFija || j === S.cat.jornadaFija);
   $('asg-jor').innerHTML = opts(js);
-  asgCursos(); cargarDistDocente();
+  asgCursos(); cargarDistDocente(); cargarComisionesDoc();
+}
+// ---- v4.16: comisiones institucionales del docente ----
+async function cargarComisionesDoc() {
+  const id = $('dd-doc').value; if (!id) { $('dd-com').innerHTML = ''; return; }
+  try {
+    const r = await apiT('apiCargarComisiones', id); S.comNombres = r.nombres;
+    const filas = r.lista.map(c => `<tr><td style="text-align:left">${esc(c.comision)}</td><td>${c.rol === 'COORDINADOR' ? '<b>Coordinador/a</b>' : 'Integrante'}</td>
+      <td><button onclick="quitarComision('${esc(c.clave).replace(/'/g, "\\'")}')" class="btn bg-red-50 text-red-700 py-1">🗑</button></td></tr>`).join('');
+    $('dd-com').innerHTML = `<div class="bg-teal-50 border border-teal-100 rounded-2xl p-3 space-y-2 text-xs">
+      <div class="font-black">🤝 Comisiones institucionales</div>
+      <div class="overflow-x-auto border rounded-xl bg-white"><table class="w-full planilla"><thead class="bg-teal-50"><tr><th class="text-left">Comisión</th><th>Rol</th><th></th></tr></thead>
+        <tbody>${filas || '<tr><td colspan="3" class="text-slate-400 py-2">No integra ninguna comisión.</td></tr>'}</tbody></table></div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 items-end">
+        <div class="col-span-2"><label class="lbl">Comisión (elija o escriba una nueva)</label><input id="com-nom" class="inp" list="com-lista" placeholder="Ej.: Comisión de Gestión de Riesgos">
+          <datalist id="com-lista">${r.nombres.map(n => `<option value="${esc(n)}">`).join('')}</datalist></div>
+        <div><label class="lbl">Rol en la comisión</label><select id="com-rol" class="inp"><option value="INTEGRANTE">Integrante</option><option value="COORDINADOR">Coordinador/a</option></select></div>
+        <button onclick="guardarComision(false)" class="btn btn-ok">➕ Agregar</button></div></div>`;
+  } catch (e) { toast(e.message, 'err'); }
+}
+async function guardarComision(reemplazar) {
+  const id = $('dd-doc').value, nom = $('com-nom').value.trim(), rol = $('com-rol').value;
+  if (!nom) return toast('Escriba o elija la comisión.', 'err');
+  let otra = false;
+  await run(async () => {
+    const r = await apiT('apiGuardarComision', id, nom, rol, reemplazar);
+    if (!r.success && r.conflicto) { if (confirm(r.conflicto + '\n\n¿Desea que este docente sea el nuevo coordinador/a? El anterior pasará a integrante.')) otra = true; else toast('No se guardó.', 'err'); return; }
+    toast(r.mensaje, 'ok');
+  });
+  if (otra) return guardarComision(true);
+  cargarComisionesDoc();
+}
+async function quitarComision(clave) {
+  if (!confirm('¿Quitar al docente de esta comisión? (queda en el historial)')) return;
+  await run(async () => { const r = await apiT('apiQuitarComision', clave); toast(r.mensaje, 'ok'); });
+  cargarComisionesDoc();
+}
+// ---- v4.16: consultar docentes por jornada, curso, paralelo o comisión ----
+async function iniConsulta() {
+  if (!$('cs-jor').options.length) {
+    $('cs-jor').innerHTML = opts(jornadasDir(true)); $('cs-gra').innerHTML = opts(gradosList(), '', 'Todos');
+    $('cs-par').innerHTML = opts(S.cat.paralelos, '', 'Todos');
+  }
+  try {
+    const r = await apiT('apiCargarComisiones', ''); const v = $('cs-com').value;
+    $('cs-com').innerHTML = '<option value="">Todas / sin filtro</option><option value="__TODAS__">Solo docentes con alguna comisión</option>' + r.nombres.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    $('cs-com').value = v;
+  } catch (e) { toast(e.message, 'err'); }
+}
+async function consultarDocentes(modo) {
+  const f = { jornada: $('cs-jor').value, grado: $('cs-gra').value, paralelo: $('cs-par').value, comision: $('cs-com').value };
+  await run(async () => {
+    const r = await apiT('apiReporte', 'docentes', f);
+    if (modo === 'imprimir') return mostrarReporte(r);
+    if (modo === 'excel') {
+      if (typeof XLSX === 'undefined') return toast('No se pudo cargar el generador de Excel.', 'err');
+      const filas = [['N°', 'Docente', 'Cédula', 'Correo', 'Jornada', 'Tutoría', 'Clases (curso · asignatura)', 'Comisiones', 'Carga horaria total']]
+        .concat(r.filas.map((x, i) => [i + 1, x.docente, x.cedula, x.correo, x.jornada, x.tutor, x.clases.join('\n'), x.comisiones.join('\n'), x.total]));
+      const ws = XLSX.utils.aoa_to_sheet(filas); ws['!cols'] = [5, 30, 12, 26, 11, 12, 50, 40, 10].map(w => ({ wch: w }));
+      const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Docentes'); XLSX.writeFile(wb, 'Docentes_consulta.xlsx'); return;
+    }
+    $('cs-area').innerHTML = `<p class="text-[11px] font-bold">${r.filas.length} docente(s) encontrados.</p>
+      <div class="overflow-x-auto border rounded-2xl"><table class="w-full planilla"><thead class="bg-sky-50"><tr><th>N°</th><th class="text-left">Docente</th><th>Jornada</th><th>Tutoría</th><th class="text-left">Clases</th><th class="text-left">Comisiones</th><th>Horas</th></tr></thead><tbody>
+      ${r.filas.map((x, i) => `<tr><td>${i + 1}</td><td style="text-align:left">${esc(x.docente)}</td><td>${esc(x.jornada)}</td><td>${esc(x.tutor)}</td><td style="text-align:left" class="text-[11px]">${x.clases.map(esc).join('<br>') || '—'}</td><td style="text-align:left" class="text-[11px]">${x.comisiones.map(esc).join('<br>') || '—'}</td><td class="font-bold">${x.total}</td></tr>`).join('') || '<tr><td colspan="7" class="text-slate-400 py-3">Ningún docente cumple los filtros.</td></tr>'}</tbody></table></div>`;
+  });
 }
 function ofertaDe(j) { return (S.oferta || []).filter(o => o.jornada === j); }
 function asgCursos() {
@@ -1560,17 +1673,17 @@ async function descargarPlanta() {
   if (typeof XLSX === 'undefined') return toast('No se pudo cargar el generador de Excel.', 'err');
   await run(async () => {
     const r = await apiT('apiReporte', 'planta', { jornada: $('pt-jor').value });
-    const filas = [['N°', 'Docente', 'Cédula', 'Correo', 'Jornada', 'Fecha de ingreso', 'Tutoría', 'Asignaturas (curso · asignatura · horas)', 'Otras actividades', 'Carga horaria total']]
-      .concat(r.filas.map((x, i) => [i + 1, x.docente, x.cedula, x.correo, x.jornada, x.ingreso, x.tutor, x.clases.join('\n'), x.actividades.join('\n'), x.total]));
-    const ws = XLSX.utils.aoa_to_sheet(filas); ws['!cols'] = [5, 30, 12, 26, 11, 12, 14, 60, 40, 10].map(w => ({ wch: w }));
+    const filas = [['N°', 'Docente', 'Cédula', 'Correo', 'Jornada', 'Fecha de ingreso', 'Tutoría', 'Asignaturas (curso · asignatura · horas)', 'Otras actividades', 'Carga horaria total', 'Comisiones']]
+      .concat(r.filas.map((x, i) => [i + 1, x.docente, x.cedula, x.correo, x.jornada, x.ingreso, x.tutor, x.clases.join('\n'), x.actividades.join('\n'), x.total, (x.comisiones || []).join('\n')]));
+    const ws = XLSX.utils.aoa_to_sheet(filas); ws['!cols'] = [5, 30, 12, 26, 11, 12, 14, 60, 40, 10, 40].map(w => ({ wch: w }));
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Planta docente');
     XLSX.writeFile(wb, 'Planta_docente_' + $('pt-jor').value + '.xlsx');
   });
 }
 function verMalla(v) {
   S.mallaVista = v;
-  ['docente', 'curso', 'planta', 'oferta', 'malla'].forEach(x => { $('mlv-' + x).classList.toggle('hidden', x !== v); $('mlb-' + x).className = 'btn ' + (x === v ? 'btn-primary' : 'btn-sec'); });
-  if (v === 'malla') cargarMalla(); else if (v === 'curso') cargarDistCurso(); else if (v === 'oferta') cargarOferta(); else if (v === 'docente') asgDocente();
+  ['docente', 'curso', 'planta', 'oferta', 'malla', 'consulta'].forEach(x => { $('mlv-' + x).classList.toggle('hidden', x !== v); $('mlb-' + x).className = 'btn ' + (x === v ? 'btn-primary' : 'btn-sec'); });
+  if (v === 'malla') cargarMalla(); else if (v === 'curso') cargarDistCurso(); else if (v === 'oferta') cargarOferta(); else if (v === 'docente') asgDocente(); else if (v === 'consulta') iniConsulta();
 }
 function irDistDocente(id) {
   if (!id) return toast('Primero guarde al docente.', 'err');
@@ -2754,10 +2867,18 @@ function mostrarReporte(r) {
       resumenAnual(r) +
       (r.obsGeneral ? `<table><tr><th style="width:22%">Observación general</th><td>${esc(r.obsGeneral)}</td></tr></table>` : '') +
       firmas([[r.docente, 'Docente de asignatura', 'REALIZADO'], vice(r)]) + norma(r);
+  } else if (r.tipo === 'docentes') {
+    orient = 'landscape';
+    const filas = r.filas.map((x, n) => `<tr><td class="c">${n + 1}</td><td>${esc(x.docente)}</td><td>${esc(x.cedula)}</td><td>${esc(x.jornada)}</td><td>${esc(x.tutor)}</td>
+      <td style="font-size:.9em">${x.clases.map(esc).join('<br>') || '—'}</td><td style="font-size:.9em">${x.comisiones.map(esc).join('<br>') || '—'}</td><td class="c b">${x.total}</td></tr>`);
+    const filtro = [F.jornada === 'Ambas' ? 'Todas las jornadas' : 'Jornada ' + F.jornada, F.grado || '', F.paralelo ? 'Paralelo ' + F.paralelo : '', F.comision === '__TODAS__' ? 'Docentes con comisión' : (F.comision ? 'Comisión: ' + F.comision : '')].filter(Boolean).join(' · ');
+    h = encabezado(r, 'Consulta de docentes', esc(filtro)) + ficha([['Filtro', filtro], ['Docentes', r.filas.length]]) +
+      tabla(['N°', 'Docente', 'Cédula', 'Jornada', 'Tutoría', 'Clases (curso · asignatura)', 'Comisiones', 'Carga horaria'], filas) +
+      firmas([[r.vicerrector || '', 'Vicerrector/a', 'ELABORADO'], [r.inst.rectora, 'Rectora', 'APROBADO']]) + norma(r);
   } else if (r.tipo === 'planta') {
     orient = 'landscape';
     const filas = r.filas.map((x, n) => `<tr class="${x.total > 40 ? 'alerta' : ''}"><td class="c">${n + 1}</td><td>${esc(x.docente)}</td><td>${esc(x.cedula)}</td><td>${esc(x.tutor)}</td>
-      <td style="font-size:.9em">${x.clases.map(esc).join('<br>') || '—'}</td><td style="font-size:.9em">${x.actividades.map(esc).join('<br>') || '—'}</td><td class="c b">${x.total}</td></tr>`);
+      <td style="font-size:.9em">${x.clases.map(esc).join('<br>') || '—'}</td><td style="font-size:.9em">${x.actividades.map(esc).join('<br>') || '—'}${(x.comisiones || []).length ? '<br><i>Comisiones: ' + x.comisiones.map(esc).join('; ') + '</i>' : ''}</td><td class="c b">${x.total}</td></tr>`);
     const tot = r.filas.reduce((a, x) => a + Number(x.total || 0), 0);
     h = encabezado(r, 'Planta docente – Jornada ' + esc(F.jornada), 'Asignaturas, actividades y carga horaria semanal (periodos pedagógicos)') +
       ficha([['Jornada', F.jornada], ['Docentes', r.filas.length], ['Total de horas asignadas', tot]]) +
