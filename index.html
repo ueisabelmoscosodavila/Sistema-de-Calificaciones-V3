@@ -261,7 +261,7 @@
         <button onclick="genInforme('alertas')" class="btn btn-warn">⚠️ Alertas de bajo desempeño (corte)</button>
         <button onclick="genInforme('mensual')" class="btn btn-primary">📄 Informe mensual de insumos (corte)</button>
         <button onclick="genInforme('trimestral')" class="btn btn-primary">📘 Informe trimestral por asignatura</button>
-        <button onclick="abrirBoletaModal()" class="btn btn-ok">🧾 Imprimir boletas de calificaciones</button>
+        <button onclick="abrirBoletaModal()" class="btn btn-ok solo-rectora">🧾 Imprimir boletas de calificaciones</button>
         <button onclick="genInforme('asistencia')" class="btn btn-sec">📅 Resumen de asistencia (trimestre)</button>
         <button onclick="genAlertasAsis(false)" class="btn btn-danger">🚨 Alertas de asistencia del mes (curso)</button>
         <button onclick="genAlertasAsis(true)" class="btn btn-danger">🚨 Alertas de asistencia del mes (toda la jornada)</button>
@@ -269,7 +269,7 @@
         <button onclick="genInforme('anual_asig')" class="btn btn-primary">📗 Informe anual por asignatura</button>
         <button onclick="genCursoAsig(false)" class="btn btn-primary">📚 Curso – todas las asignaturas (trimestre)</button>
         <button onclick="genCursoAsig(true)" class="btn btn-primary">📚 Curso – todas las asignaturas (anual)</button>
-        <button onclick="genInforme('ficha_inicial')" class="btn btn-ok">🌱 Ficha cualitativa (Inicial / Preparatoria)</button>
+        <button onclick="genInforme('ficha_inicial')" class="btn btn-ok solo-rectora">🌱 Ficha cualitativa (Inicial / Preparatoria)</button>
         <button onclick="genInforme('ambitos')" class="btn btn-ok">📊 Informe por ámbitos (Inicial / Preparatoria)</button>
         <button onclick="imprimirNomina('inf')" class="btn btn-sec">🎒 Nómina del curso</button>
       </div>
@@ -284,11 +284,12 @@
         <button id="mlb-planta" onclick="verMalla('planta')" class="btn btn-sec">🖨️ Planta docente</button>
         <button id="mlb-oferta" onclick="verMalla('oferta')" class="btn btn-sec">🗂️ Cursos por jornada</button>
         <button id="mlb-malla" onclick="verMalla('malla')" class="btn btn-sec">📚 Malla curricular</button>
-        <button id="mlb-consulta" onclick="verMalla('consulta')" class="btn btn-sec">🔎 Consultar docentes y comisiones</button></div>
+        <button id="mlb-consulta" onclick="verMalla('consulta')" class="btn btn-sec">🔎 Consultar docentes y comisiones</button>
+        <button id="mlb-catalogo" onclick="verMalla('catalogo')" class="btn btn-sec">🗂️ Comisiones y funciones</button></div>
       <div id="mlv-malla" class="hidden space-y-2">
         <div class="flex flex-wrap items-end gap-2"><div><label class="lbl">Año de básica / curso</label><select id="ml-gra" class="inp" onchange="cargarMalla()"></select></div><div id="ml-tot" class="text-[11px]"></div></div>
         <div id="ml-area"></div>
-        <div class="bg-sky-50 border border-sky-100 rounded-2xl p-3 grid grid-cols-2 sm:grid-cols-5 gap-2 items-end text-xs">
+        <div class="solo-rectora bg-sky-50 border border-sky-100 rounded-2xl p-3 grid grid-cols-2 sm:grid-cols-5 gap-2 items-end text-xs">
           <div class="col-span-2 sm:col-span-5 font-black">➕ Agregar asignatura institucional a este año</div>
           <div><label class="lbl">Área</label><input id="ml-narea" class="inp" placeholder="Ej.: Ciencias Naturales"></div>
           <div><label class="lbl">Asignatura</label><input id="ml-nasig" class="inp" placeholder="Ej.: Robótica"></div>
@@ -315,6 +316,16 @@
         <div id="asg-area"></div>
         <div id="dd-area"></div>
         <div id="dd-com"></div>
+      </div>
+      <div id="mlv-catalogo" class="hidden space-y-2">
+        <p class="text-[11px] text-slate-600">Rectorado crea aquí las <b>comisiones institucionales</b> y las <b>funciones</b> (actividades que no son clases). Luego se asignan a cada docente en "Asignar a un docente". Vicerrectorado las consulta.</p>
+        <div id="cat-form" class="solo-rectora grid grid-cols-2 sm:grid-cols-5 gap-2 items-end bg-teal-50 border border-teal-100 rounded-2xl p-3 text-xs">
+          <div><label class="lbl">Tipo</label><select id="cat-tipo" class="inp"><option value="COMISION">Comisión</option><option value="FUNCION">Función / actividad</option></select></div>
+          <div class="col-span-2 sm:col-span-1"><label class="lbl">Nombre</label><input id="cat-nom" class="inp" placeholder="Ej.: Comisión de Gestión de Riesgos"></div>
+          <div class="col-span-2"><label class="lbl">Descripción (opcional)</label><input id="cat-desc" class="inp" placeholder="Objetivo o tareas principales"></div>
+          <button onclick="guardarCatalogo()" class="btn btn-ok">➕ Crear / actualizar</button>
+        </div>
+        <div id="cat-area" class="grid grid-cols-1 lg:grid-cols-2 gap-3"></div>
       </div>
       <div id="mlv-consulta" class="hidden space-y-2">
         <div class="grid grid-cols-2 sm:grid-cols-6 gap-2 items-end bg-sky-50 p-3 rounded-2xl border border-sky-100">
@@ -420,7 +431,7 @@
       <div class="card space-y-3">
         <div><h3 class="font-black text-sm">🎓 Asignaturas optativas – Bachillerato en Ciencias</h3>
           <p class="text-[11px] text-slate-500">Registre las optativas que ofrece la institución y en qué años se dictan. Son <b>cualitativas</b> (A+ … E-): no se promedian ni son requisito de promoción (Art. 9 del Acuerdo 82-A). Aparecen en la boleta de esos años y se asignan al docente en su ficha.</p></div>
-        <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 bg-slate-50 border rounded-2xl p-3 text-xs">
+        <div class="solo-rectora grid grid-cols-1 sm:grid-cols-4 gap-2 bg-slate-50 border rounded-2xl p-3 text-xs">
           <input type="hidden" id="op-id">
           <div class="sm:col-span-2"><label class="lbl">Nombre de la optativa</label><input id="op-nom" class="inp" placeholder="Ej.: Redacción creativa, Laboratorio de ciencias"></div>
           <div><label class="lbl">Jornada</label><select id="op-jor" class="inp"></select></div>
@@ -435,6 +446,42 @@
       </div>
     </div>
 
+    <!-- CIERRE DE TRIMESTRE (v4.17: Vicerrectorado cierra tras la junta de curso; solo Rectorado reabre) -->
+    <div id="tab-cierretrim" class="tab hidden card space-y-3">
+      <div><h3 class="font-black text-sm">🔒 Cierre de trimestre (después de la junta de curso)</h3>
+        <p class="text-[11px] text-slate-500">Al cerrar, los docentes ya no pueden ingresar ni modificar calificaciones de ese trimestre en ese curso (insumos, refuerzos, sumativas, mejoras, destrezas y evaluaciones cualitativas). <b>Solo Rectorado puede reabrir.</b> Todo queda en auditoría.</p></div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 items-end">
+        <div><label class="lbl">Jornada</label><select id="ct-jor" class="inp" onchange="cargarCierreTrim()"></select></div>
+        <div><label class="lbl">Trimestre</label><select id="ct-trim" class="inp" onchange="cargarCierreTrim()"></select></div>
+        <div class="col-span-2"><label class="lbl">Observación (acta de junta de curso, fecha…)</label><input id="ct-obs" class="inp" placeholder="Ej.: Junta de curso del 12/12/2026, acta N° 3"></div>
+      </div>
+      <div id="ct-area"></div>
+    </div>
+
+    <!-- PERMISOS (v4.17: ADMINISTRADOR) -->
+    <div id="tab-permisos" class="tab hidden space-y-4">
+      <div class="card space-y-2">
+        <div class="flex flex-wrap justify-between items-center gap-2"><div><h3 class="font-black text-sm">🛡️ Permisos por rol</h3>
+          <p class="text-[11px] text-slate-500">Desmarque una casilla para BLOQUEAR esa función a ese rol (se rechaza en el servidor y desaparece de su pantalla). Los cambios rigen de inmediato; la pantalla de quien ya está conectado se actualiza al volver a ingresar.</p></div>
+          <button onclick="guardarPermisos()" class="btn btn-primary">💾 Guardar permisos</button></div>
+        <div id="pm-area" class="overflow-x-auto"></div>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="card space-y-2">
+          <h3 class="font-black text-sm">🧹 Revisar calificaciones duplicadas</h3>
+          <p class="text-[11px] text-slate-500">Comprueba que cada calificación tenga un solo registro (estudiante + periodo + curso + asignatura). Con "Corregir", deja el más reciente y respalda los demás en la hoja "Duplicados_Respaldo".</p>
+          <div class="flex gap-2"><button onclick="revisarDuplicados(false)" class="btn btn-sec">🔎 Revisar</button><button onclick="revisarDuplicados(true)" class="btn btn-warn">🧹 Corregir</button></div>
+          <div id="dup-area" class="text-xs"></div>
+        </div>
+        <div class="card space-y-2">
+          <h3 class="font-black text-sm">👤 Datos del Administrador</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2"><input id="ad-nom" class="inp" placeholder="Nombre"><input id="ad-ced" class="inp font-mono" placeholder="Cédula"><input id="ad-cor" class="inp" placeholder="Correo"></div>
+          <p class="text-[11px] text-slate-500">La cédula y el correo sirven para recuperar la contraseña. Si se pierde, el dueño del archivo ejecuta <code>restablecerAdministrador</code> en Apps Script.</p>
+          <button onclick="guardarDatosAdmin()" class="btn btn-ok">💾 Guardar</button>
+        </div>
+      </div>
+    </div>
+
     <!-- INSTITUCIÓN (RECTORA) -->
     <div id="tab-institucion" class="tab hidden grid grid-cols-1 lg:grid-cols-2 gap-4">
       <div class="card space-y-3">
@@ -445,6 +492,12 @@
           <div class="font-black text-xs">🔁 Recalcular alertas tempranas</div>
           <p class="text-[11px] text-slate-600">Vuelve a calcular la alerta de todo lo ya registrado con el criterio vigente (Media a Bachillerato: promedio del corte; Elemental: por insumo; Preparatoria: por destreza). <b>No modifica ninguna calificación.</b> Úselo después de cambiar el criterio de alerta.</p>
           <button onclick="recalcularAlertas()" class="btn btn-warn">🔁 Recalcular alertas</button>
+        </div>
+        <div class="border-t pt-2 space-y-1">
+          <div class="font-black text-xs">🧹 Revisar calificaciones duplicadas</div>
+          <p class="text-[11px] text-slate-600">Comprueba que cada calificación tenga un solo registro. "Corregir" deja el más reciente y respalda los demás en la hoja "Duplicados_Respaldo".</p>
+          <div class="flex gap-2"><button onclick="revisarDuplicados(false, 'dup-inst')" class="btn btn-sec">🔎 Revisar</button><button onclick="revisarDuplicados(true, 'dup-inst')" class="btn btn-warn">🧹 Corregir</button></div>
+          <div id="dup-inst" class="text-xs"></div>
         </div>
       </div>
       <div class="space-y-4">
@@ -517,6 +570,18 @@
     <p class="text-slate-600">Usted tiene funciones de autoridad y también dicta clases. Puede cambiar de rol cuando quiera con el botón <b>🔄 Cambiar rol</b> de la parte superior.</p>
     <div id="rol-ops" class="space-y-2"></div>
     <button id="rol-cancel" onclick="cerrarModal('m-rol')" class="btn btn-sec w-full">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL SESIÓN VENCIDA (v4.17) -->
+<div id="m-relog" class="hidden fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50">
+  <div class="bg-white max-w-sm w-full p-5 rounded-3xl space-y-3 text-xs">
+    <h3 class="font-black text-sm">🔐 Su sesión venció</h3>
+    <p class="text-amber-900 bg-amber-50 border border-amber-200 rounded-xl p-2">Lo que escribió en pantalla <b>sigue ahí</b>. Ingrese su contraseña para continuar y luego pulse <b>Guardar</b> otra vez.</p>
+    <div><label class="lbl">Usuario</label><input id="rl-u" class="inp" readonly></div>
+    <div><label class="lbl">Contraseña</label><input id="rl-p" type="password" class="inp" onkeydown="if(event.key==='Enter')reingresar()"></div>
+    <div id="rl-err" class="hidden text-red-700 font-bold"></div>
+    <div class="flex gap-2"><button onclick="cerrarModal('m-relog');salir(true)" class="btn btn-sec flex-1">Salir</button><button onclick="reingresar()" class="btn btn-primary flex-1">Continuar</button></div>
   </div>
 </div>
 
@@ -829,7 +894,11 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxB6LknJLZI8kniGwR05HsY
 const EN_APPS_SCRIPT = typeof google !== 'undefined' && google.script && google.script.run;
 function errorApi(m, ko) {
   m = String(m || 'Error de conexión').replace(/^Error:\s*/, '');
-  if (m.indexOf('SESION_EXPIRADA') >= 0) { alert('Su sesión expiró. Ingrese nuevamente.'); salir(true); }
+  if (m.indexOf('SESION_EXPIRADA') >= 0) {
+    // v4.17: si está trabajando, NO se cierra la pantalla: se pide la contraseña y lo escrito se conserva
+    if (S.ses && !$('v-app').classList.contains('hidden')) { $('rl-u').value = S.ses.usuario; $('rl-p').value = ''; $('rl-err').classList.add('hidden'); abrirModal('m-relog'); m = 'Su sesión venció. Ingrese su contraseña en la ventana y vuelva a pulsar Guardar: lo que escribió NO se ha perdido.'; }
+    else { alert('Su sesión expiró. Ingrese nuevamente.'); salir(true); }
+  }
   ko(new Error(m));
 }
 function api(fn, ...args) {
@@ -941,6 +1010,16 @@ async function login() {
   });
 }
 
+async function reingresar() {
+  const p = $('rl-p').value, er = $('rl-err'); if (!p) return;
+  try {
+    const r = await api('apiLogin', $('rl-u').value, p);
+    if (!r.success) { er.textContent = r.mensaje; er.classList.remove('hidden'); return; }
+    let tk = r.token;
+    if (r.sesion.rol !== S.ses.rol) { const x = await api('apiCambiarRol', tk, S.ses.rol); tk = x.token; }
+    S.token = tk; cerrarModal('m-relog'); toast('Sesión renovada. Pulse Guardar nuevamente.', 'ok');
+  } catch (e) { er.textContent = e.message; er.classList.remove('hidden'); }
+}
 // ---- v4.16: doble rol (autoridad que también es docente) ----
 const ICO_ROL = r => r === 'DOCENTE' ? '📝' : (/INSPEC/.test(r) ? '🚨' : '🏫');
 function abrirRoles(alIngresar) {
@@ -963,6 +1042,7 @@ async function elegirRol(rol) {
   });
 }
 function salir(silencioso) {
+  if (!silencioso && !seguirSinGuardar()) return;
   if (S.token && !silencioso) api('apiCerrarSesion', S.token).catch(() => {});
   S.token = null; S.ses = null; S.cat = null; S.roles = [];
   $('b-cambiarol').classList.add('hidden');
@@ -977,17 +1057,26 @@ function iniciarApp() {
   $('b-rol').textContent = S.ses.cargo + (S.ses.rol === 'DOCENTE' ? ' · ' + S.ses.jornada : '');
   $('b-cambiarol').classList.toggle('hidden', !(S.roles && S.roles.length > 1));
   const R = S.ses.rol;
-  const tabs = R === 'DOCENTE' ? [['planilla', '📝 Mis calificaciones']]
-    : R === 'RECTORA' ? [['estudiantes', '🎒 Estudiantes'], ['docentes', '👨‍🏫 Docentes'], ['optativas', '🎓 Optativas BGU'], ['periodos', '📅 Fechas, cortes y bloqueos'], ['informes', '📊 Informes'], ['seguimiento', '⚠️ Seguimiento y cumplimiento'], ['inasistencias', '🚨 Inasistencias'], ['efb', '🎓 Evaluación final de Bachillerato'], ['malla', '📋 Distributivo'], ['institucion', '🏫 Institución'], ['cierre', '🎓 Cierre del año']]
+  let tabs = R === 'DOCENTE' ? [['planilla', '📝 Mis calificaciones']]
+    : R === 'ADMINISTRADOR' ? [['permisos', '🛡️ Permisos y herramientas']]
+    : R === 'RECTORA' ? [['estudiantes', '🎒 Estudiantes'], ['docentes', '👨‍🏫 Docentes'], ['optativas', '🎓 Optativas BGU'], ['periodos', '📅 Fechas, cortes y bloqueos'], ['informes', '📊 Informes'], ['seguimiento', '⚠️ Seguimiento y cumplimiento'], ['inasistencias', '🚨 Inasistencias'], ['efb', '🎓 Evaluación final de Bachillerato'], ['malla', '📋 Distributivo'], ['cierretrim', '🔒 Cierre de trimestre'], ['institucion', '🏫 Institución'], ['cierre', '🎓 Cierre del año']]
     : esInspeccion() ? [['inasistencias', '🚨 Inasistencias y justificaciones']]
-    : [['estudiantes', '🎒 Estudiantes'], ['optativas', '🎓 Optativas BGU'], ['informes', '📊 Informes'], ['seguimiento', '⚠️ Seguimiento y cumplimiento'], ['efb', '🎓 Evaluación final de Bachillerato'], ['malla', '📋 Distributivo']];
+    : [['estudiantes', '🎒 Estudiantes'], ['optativas', '🎓 Optativas BGU'], ['informes', '📊 Informes'], ['seguimiento', '⚠️ Seguimiento y cumplimiento'], ['efb', '🎓 Evaluación final de Bachillerato'], ['malla', '📋 Distributivo'], ['cierretrim', '🔒 Cierre de trimestre']];
+  // v4.17: las pestañas de funciones bloqueadas por el Administrador no se muestran
+  const bloq = S.cat.bloqueos || [];
+  tabs = tabs.filter(t => !bloq.includes(TAB_FUN[t[0]]));
+  if (!tabs.length) { alert('El Administrador del sistema bloqueó todas las funciones de su perfil.'); salir(); return; }
   $('nav').innerHTML = tabs.map(t => `<button data-tab="${t[0]}" onclick="irTab('${t[0]}')" class="tabbtn px-4 py-2 rounded-xl font-semibold text-slate-600 hover:bg-slate-100 whitespace-nowrap">${t[1]}</button>`).join('');
   document.querySelectorAll('.solo-rectora').forEach(e => e.classList.toggle('hidden', R !== 'RECTORA'));
-  if (R !== 'DOCENTE') { prepararFiltrosDirectivos(); prepararInasistencias(); }
+  if (R !== 'DOCENTE' && R !== 'ADMINISTRADOR') { prepararFiltrosDirectivos(); prepararInasistencias(); }
   irTab(tabs[0][0]);
 }
 
+const TAB_FUN = { estudiantes: 'ESTUDIANTES', docentes: 'DOCENTES', optativas: 'OPTATIVAS', periodos: 'PERIODOS', informes: 'INFORMES', seguimiento: 'SEGUIMIENTO', inasistencias: 'INASISTENCIAS', efb: 'EFB', malla: 'DISTRIBUTIVO', cierretrim: 'CIERRE_TRIM', institucion: 'INSTITUCION', cierre: 'CIERRE_ANIO' };
+const SUB_FUN = { form: 'D_FORMATIVA', ref: 'D_REFUERZO', sum: 'D_SUMATIVA', ini: 'D_DESTREZAS', aia: 'D_CUALITATIVA', lec: 'D_CUALITATIVA', opt: 'D_CUALITATIVA', ovp: 'D_CUALITATIVA', asis: 'D_ASISTENCIA', just: 'D_ASISTENCIA', efb: 'D_EFB' };
+const esRect = () => S.ses && S.ses.rol === 'RECTORA';
 const ON_TAB = {
+  permisos: () => cargarPermisos(), cierretrim: () => iniCierreTrim(),
   estudiantes: () => cargarEstudiantes(), docentes: () => cargarDocentes(), periodos: () => { renderPeriodos(); cargarDesbloqueos(); },
   optativas: () => cargarOptativas(), inasistencias: () => cargarInasistencias(), cierre: () => cargarCierre(), efb: () => iniEFB(), malla: () => iniMalla(), informes: () => { cargarAnios(); infCurso(); }, seguimiento: () => cumCortes(), institucion: () => cargarInstitucion(), planilla: () => initPlanilla()
 };
@@ -1426,6 +1515,56 @@ async function guardarHabilidades() {
   await run(async () => { const r = await apiT('apiGuardarConfig', [{ parametro: 'Habilidades_AIA', valor: v.join(', ') }]); toast(r.mensaje, 'ok'); await refrescarCatalogo(); pintarHabilidades(); });
 }
 
+// ---- v4.17: duplicados ----
+async function revisarDuplicados(corregir, area) {
+  if (corregir && !confirm('Se dejará el registro más reciente de cada calificación repetida y los demás se respaldarán en la hoja "Duplicados_Respaldo". ¿Continuar?')) return;
+  await run(async () => {
+    const r = await apiT('apiRevisarDuplicados', corregir);
+    $(area || 'dup-area').innerHTML = `<p class="font-bold ${r.total ? 'text-red-700' : 'text-emerald-700'}">${esc(r.mensaje)}</p><table class="w-full planilla mt-1"><thead class="bg-slate-50"><tr><th class="text-left">Hoja</th><th>Registros</th><th>Duplicados</th></tr></thead><tbody>${r.hojas.map(h => `<tr><td style="text-align:left">${esc(h.hoja)}</td><td>${h.filas}</td><td class="${h.duplicadas ? 'text-red-700 font-bold' : ''}">${h.duplicadas}</td></tr>`).join('')}</tbody></table>`;
+  });
+}
+// ---- v4.17: cierre de trimestre ----
+function iniCierreTrim() {
+  if (!$('ct-jor').options.length) { $('ct-jor').innerHTML = opts(jornadasDir(false)); $('ct-trim').innerHTML = opts(TRIMS, trimestreActual()); }
+  cargarCierreTrim();
+}
+async function cargarCierreTrim() {
+  await run(async () => {
+    const r = await apiT('apiCargarCierresTrim', $('ct-jor').value, $('ct-trim').value); S.ct = r;
+    const fila = (c, i) => `<tr class="${c.estado === 'CERRADO' ? 'bg-red-50' : ''}"><td><input type="checkbox" class="ct-chk" data-i="${i}"></td><td style="text-align:left">${esc(c.grado)}</td><td>${esc(c.paralelo)}</td>
+      <td>${c.estado === 'CERRADO' ? '<b class="text-red-700">🔒 CERRADO</b>' : '<b class="text-emerald-700">🟢 Abierto</b>'}</td><td class="text-[11px]">${c.estado === 'CERRADO' ? esc(c.fechaCierre + ' · ' + c.cerradoPor) : (c.fechaReapertura ? 'Reabierto ' + esc(c.fechaReapertura + ' · ' + c.reabiertoPor) : '')}</td><td style="text-align:left" class="text-[11px]">${esc(c.obs || '')}</td></tr>`;
+    $('ct-area').innerHTML = `<div class="flex flex-wrap gap-2 mb-2"><button onclick="document.querySelectorAll('.ct-chk').forEach(x=>x.checked=true)" class="btn btn-sec">☑️ Marcar todos</button>
+      <button onclick="cambiarCierreTrim(true)" class="btn btn-danger">🔒 Cerrar trimestre de los marcados</button>${r.puedeReabrir ? '<button onclick="cambiarCierreTrim(false)" class="btn btn-ok">🔓 Reabrir los marcados (Rectorado)</button>' : ''}</div>
+      <div class="overflow-x-auto border rounded-2xl"><table class="w-full planilla"><thead class="bg-sky-50"><tr><th>✔</th><th class="text-left">Año de básica / curso</th><th>Paralelo</th><th>Estado</th><th>Detalle</th><th class="text-left">Observación</th></tr></thead><tbody>
+      ${r.cursos.map(fila).join('') || '<tr><td colspan="6" class="text-slate-400 py-3">No hay cursos registrados en esta jornada (registre "Cursos por jornada" o estudiantes).</td></tr>'}</tbody></table></div>`;
+  });
+}
+async function cambiarCierreTrim(cerrar) {
+  const sel = [...document.querySelectorAll('.ct-chk')].filter(x => x.checked).map(x => S.ct.cursos[Number(x.dataset.i)]).map(c => ({ grado: c.grado, paralelo: c.paralelo }));
+  if (!sel.length) return toast('Marque al menos un curso.', 'err');
+  if (!confirm((cerrar ? '¿CERRAR' : '¿REABRIR') + ' el ' + S.ct.trimestre + '° trimestre de ' + sel.length + ' curso(s) de la jornada ' + S.ct.jornada + '?' + (cerrar ? '\n\nLos docentes ya no podrán ingresar ni modificar calificaciones de ese trimestre. Solo Rectorado podrá reabrirlo.' : ''))) return;
+  await run(async () => { const r = await apiT(cerrar ? 'apiCerrarTrimestre' : 'apiReabrirTrimestre', S.ct.jornada, S.ct.trimestre, sel, $('ct-obs').value); toast(r.mensaje, 'ok'); });
+  cargarCierreTrim();
+}
+// ---- v4.17: Administrador ----
+async function cargarPermisos() {
+  await run(async () => {
+    const r = await apiT('apiCargarPermisos'); S.pm = r;
+    $('ad-nom').value = r.admin.nombre === '(Registrar nombre)' ? '' : r.admin.nombre; $('ad-ced').value = r.admin.cedula; $('ad-cor').value = r.admin.correo;
+    $('pm-area').innerHTML = `<table class="w-full planilla text-[11px]"><thead class="bg-sky-50"><tr><th class="text-left">Función</th>${r.roles.map(x => `<th>${esc(x.cargo)}</th>`).join('')}</tr></thead><tbody>
+      ${r.funciones.map(f => `<tr><td style="text-align:left">${esc(f.n)}</td>${r.roles.map(x => f.roles.includes(x.rol)
+        ? `<td class="${f.estado[x.rol] === 'BLOQUEADO' ? 'bg-red-50' : ''}"><input type="checkbox" class="pm-chk" data-r="${x.rol}" data-f="${f.k}" ${f.estado[x.rol] === 'BLOQUEADO' ? '' : 'checked'}></td>` : '<td class="text-slate-300">—</td>').join('')}</tr>`).join('')}</tbody></table>
+      <p class="text-[10px] text-slate-500 mt-1">✔ = habilitado · casilla vacía = bloqueado · — = no aplica a ese rol.</p>`;
+  });
+}
+async function guardarPermisos() {
+  const l = [...document.querySelectorAll('.pm-chk')].map(x => ({ rol: x.dataset.r, funcion: x.dataset.f, bloqueado: !x.checked }));
+  const n = l.filter(x => x.bloqueado).length;
+  if (!confirm('Se guardarán los permisos (' + n + ' bloqueo(s) en total). ¿Continuar?')) return;
+  await run(async () => { const r = await apiT('apiGuardarPermisos', l); toast(r.mensaje, 'ok'); });
+  cargarPermisos();
+}
+async function guardarDatosAdmin() { await run(async () => { const r = await apiT('apiGuardarDatosAdmin', $('ad-nom').value, $('ad-ced').value, $('ad-cor').value); toast(r.mensaje, 'ok'); }); }
 async function recalcularAlertas() {
   if (!confirm('Se recalcularán las alertas de TODAS las planillas guardadas con el criterio vigente.\nNo se modifica ninguna calificación.\n\n¿Continuar?')) return;
   await run(async () => { const r = await apiT('apiRecalcularAlertas'); toast(r.mensaje, 'ok'); });
@@ -1478,7 +1617,7 @@ function renderEFB(d, area, acc) {
   const sel = (i, k, v, list, ph) => `<select id="ef-${k}-${i}" class="inp text-[11px] px-1" ${can(k) ? '' : 'disabled'}>${opts(list, v || '', ph)}</select>`;
   const cm = (i, k, v, base) => (Number(String(base).replace(',', '.')) < 7 && base !== '' && base !== undefined) || v ? inp(i, k, v, 'w-14 border-red-300') : '<span class="text-slate-300">—</span>';
   const est = s => /^BACHILLER/.test(s) ? 'bg-emerald-100 text-emerald-800' : (/PENDIENTE|RINDE/.test(s) ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-900');
-  if (!d.estudiantes.length) { $(area).innerHTML = '<p class="text-center text-slate-400 py-6 text-xs">No hay estudiantes en este curso.</p>'; $(acc).innerHTML = ''; return; }
+  if (!d.estudiantes.length) { $(area).innerHTML = `<p class="text-center text-slate-500 py-6 text-xs">No hay estudiantes activos registrados en <b>3° Bachillerato ${esc((S.efbCtx || {}).paralelo || '')}</b> de la jornada <b>${esc((S.efbCtx || {}).jornada || '')}</b>.<br>Revise en la pestaña Estudiantes que su "Año / curso", "Paralelo" y "Jornada" estén registrados así.</p>`; $(acc).innerHTML = ''; return; }
   const rows = d.estudiantes.map((e, i) => {
     const r = e.datos, c = e.calc;
     return `<tr>
@@ -1578,6 +1717,29 @@ async function quitarComision(clave) {
   await run(async () => { const r = await apiT('apiQuitarComision', clave); toast(r.mensaje, 'ok'); });
   cargarComisionesDoc();
 }
+// ---- v4.17: catálogo de comisiones y funciones (Rectorado crea; Vicerrectorado consulta) ----
+async function cargarCatalogo() {
+  await run(async () => {
+    const r = await apiT('apiCargarCatalogoFun');
+    $('cat-form').classList.toggle('hidden', !r.puedeEditar);
+    const fila = x => `<tr><td style="text-align:left" class="font-semibold">${esc(x.nombre)}</td><td style="text-align:left" class="text-[11px]">${esc(x.descripcion || '')}</td>${x.integrantes !== undefined ? `<td>${x.integrantes}</td>` : ''}
+      <td>${r.puedeEditar && x.clave ? `<button onclick="quitarCatalogo('${esc(x.clave).replace(/'/g, "\\'")}')" class="btn bg-red-50 text-red-700 py-1">🗑</button>` : ''}</td></tr>`;
+    $('cat-area').innerHTML = `<div class="border rounded-2xl p-3"><div class="font-black text-xs mb-1">🤝 Comisiones institucionales</div>
+      <table class="w-full planilla"><thead class="bg-teal-50"><tr><th class="text-left">Comisión</th><th class="text-left">Descripción</th><th>Integrantes</th><th></th></tr></thead><tbody>${r.comisiones.map(fila).join('') || '<tr><td colspan="4" class="text-slate-400 py-2">Aún no hay comisiones.</td></tr>'}</tbody></table></div>
+      <div class="border rounded-2xl p-3"><div class="font-black text-xs mb-1">🧩 Funciones / actividades (no son clases)</div>
+      <p class="text-[10px] text-slate-500 mb-1">Siempre disponibles: ${esc(r.funcionesBase.join(', '))}.</p>
+      <table class="w-full planilla"><thead class="bg-violet-50"><tr><th class="text-left">Función creada por Rectorado</th><th class="text-left">Descripción</th><th></th></tr></thead><tbody>${r.funciones.map(fila).join('') || '<tr><td colspan="3" class="text-slate-400 py-2">Sin funciones adicionales.</td></tr>'}</tbody></table></div>`;
+  });
+}
+async function guardarCatalogo() {
+  await run(async () => { const r = await apiT('apiGuardarCatalogoFun', $('cat-tipo').value, $('cat-nom').value, $('cat-desc').value); toast(r.mensaje, 'ok'); $('cat-nom').value = ''; $('cat-desc').value = ''; });
+  cargarCatalogo();
+}
+async function quitarCatalogo(clave) {
+  if (!confirm('¿Retirar del catálogo? Queda en el historial.')) return;
+  await run(async () => { const r = await apiT('apiQuitarCatalogoFun', clave); toast(r.mensaje, 'ok'); });
+  cargarCatalogo();
+}
 // ---- v4.16: consultar docentes por jornada, curso, paralelo o comisión ----
 async function iniConsulta() {
   if (!$('cs-jor').options.length) {
@@ -1660,7 +1822,8 @@ async function cargarOferta() {
     $('of-area').innerHTML = jornadasDir(false).map(j => `<div class="border rounded-2xl p-3"><div class="font-black text-xs mb-1">Jornada ${esc(j)}</div>
       <table class="w-full planilla"><thead class="bg-sky-50"><tr><th class="text-left">Año de básica / curso</th>${S.cat.paralelos.map(p => `<th>${p}</th>`).join('')}</tr></thead><tbody>
       ${gradosList().map((g, gi) => `<tr><td style="text-align:left">${esc(g)}</td>${S.cat.paralelos.map(p => `<td><input type="checkbox" class="of-${j}" data-g="${esc(g)}" data-p="${p}" ${r.oferta.some(o => o.jornada === j && o.grado === g && o.paralelo === p) ? 'checked' : ''}></td>`).join('')}</tr>`).join('')}
-      </tbody></table><button onclick="guardarOferta('${j}')" class="btn btn-ok mt-2">💾 Guardar jornada ${esc(j)}</button></div>`).join('');
+      </tbody></table>${esRect() ? `<button onclick="guardarOferta('${j}')" class="btn btn-ok mt-2">💾 Guardar jornada ${esc(j)}</button>` : '<p class="text-[11px] text-slate-500 mt-1">👁️ Solo lectura: la registra Rectorado.</p>'}</div>`).join('');
+    if (!esRect()) $('of-area').querySelectorAll('input').forEach(x => x.disabled = true);
   });
 }
 async function guardarOferta(j) {
@@ -1682,8 +1845,8 @@ async function descargarPlanta() {
 }
 function verMalla(v) {
   S.mallaVista = v;
-  ['docente', 'curso', 'planta', 'oferta', 'malla', 'consulta'].forEach(x => { $('mlv-' + x).classList.toggle('hidden', x !== v); $('mlb-' + x).className = 'btn ' + (x === v ? 'btn-primary' : 'btn-sec'); });
-  if (v === 'malla') cargarMalla(); else if (v === 'curso') cargarDistCurso(); else if (v === 'oferta') cargarOferta(); else if (v === 'docente') asgDocente(); else if (v === 'consulta') iniConsulta();
+  ['docente', 'curso', 'planta', 'oferta', 'malla', 'consulta', 'catalogo'].forEach(x => { $('mlv-' + x).classList.toggle('hidden', x !== v); $('mlb-' + x).className = 'btn ' + (x === v ? 'btn-primary' : 'btn-sec'); });
+  if (v === 'malla') cargarMalla(); else if (v === 'curso') cargarDistCurso(); else if (v === 'oferta') cargarOferta(); else if (v === 'docente') asgDocente(); else if (v === 'consulta') iniConsulta(); else if (v === 'catalogo') cargarCatalogo();
 }
 function irDistDocente(id) {
   if (!id) return toast('Primero guarde al docente.', 'err');
@@ -1707,7 +1870,8 @@ async function cargarMalla() {
       ${r.optativas.map((o, i) => `<tr><td style="text-align:left">${esc(o.nombre)}</td><td>${esc(o.jornada)}</td><td><input id="ml-o-${i}" class="inp w-20 text-center" value="${esc(o.horas)}" oninput="totMalla()"></td></tr>`).join('')}</tbody></table></div>`
       : (/Bachillerato/.test(r.grado) ? '<p class="text-[11px] text-slate-500 mt-2">No hay optativas en el catálogo para este curso (se registran en la pestaña Optativas BGU).</p>' : '');
     $('ml-area').innerHTML = `<div class="overflow-x-auto border rounded-2xl"><table class="w-full planilla"><thead class="bg-sky-50"><tr><th class="text-left">Área</th><th class="text-left">Asignatura</th><th>Evaluación</th><th>Origen</th><th>Horas semanales</th><th></th></tr></thead><tbody>${filas}</tbody></table></div>${opt}
-      <div class="flex gap-2 mt-2"><button onclick="guardarMalla(false)" class="btn btn-ok">💾 Guardar malla</button></div>`;
+      ${esRect() ? '<div class="flex gap-2 mt-2"><button onclick="guardarMalla(false)" class="btn btn-ok">💾 Guardar malla</button></div>' : '<p class="text-[11px] text-slate-500 mt-2">👁️ Solo lectura: la malla la modifica Rectorado.</p>'}`;
+    if (!esRect()) $('ml-area').querySelectorAll('input,select,button').forEach(x => { if (x.tagName === 'BUTTON') x.remove(); else x.disabled = true; });
     r.filas.forEach((m, i) => { const el = $('ml-h-' + i); if (el) el.oninput = totMalla; });
     Object.keys(vistos).forEach(g => { $('ml-g-' + g).oninput = totMalla; });
     totMalla();
@@ -2091,7 +2255,7 @@ async function cargarOptativas() {
     S.opts = await apiT('apiListarOptativas');
     $('op-body').innerHTML = S.opts.map(o => `<tr class="${o.estado === 'INACTIVA' ? 'opacity-50' : ''}"><td class="font-mono">${esc(o.id)}</td><td class="font-bold">Optativa: ${esc(o.nombre)}</td>
       <td>${esc(o.grados.join(', '))}</td><td>${esc(o.jornada)}</td><td>${esc(o.estado)}</td><td>${esc(o.por)}</td>
-      <td><button onclick="editarOptativa('${esc(o.id)}')" class="btn btn-sec py-1">✏️ Editar</button></td></tr>`).join('')
+      <td>${esRect() ? `<button onclick="editarOptativa('${esc(o.id)}')" class="btn btn-sec py-1">✏️ Editar</button>` : '👁️'}</td></tr>`).join('')
       || '<tr><td colspan="7" class="text-center text-slate-400 py-4">Aún no hay optativas registradas.</td></tr>';
   });
 }
@@ -2300,10 +2464,34 @@ function initPlanilla() {
   b.className = 'px-2.5 py-1 rounded-full font-black text-[11px] ' + (S.cat.bloqueo ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800');
   plCambio(true);
 }
+async function consultaCursoDoc(anual) {
+  const c = plCtx(), f = { jornada: c.jornada, grado: c.grado, paralelo: c.paralelo, trimestre: anual ? 'ANUAL' : c.trimestre, periodo: anual ? 'ANUAL' : '' };
+  await run(async () => mostrarReporte(await apiT('apiReporte', 'curso_asignaturas', f)));
+}
+// ---- v4.17: protección de lo escrito en la planilla ----
+// 1) Una carga que llega tarde (el docente cambió de curso o de corte rápido) ya no reemplaza la planilla actual:
+//    antes podía mostrarse la lista de un corte y guardarse en otro.
+// 2) Si hay calificaciones escritas sin guardar, se pide confirmación antes de cambiar de planilla o salir.
+S.plSeq = 0; S.sucio = false;
+document.addEventListener('input', e => { if (e.target.closest && e.target.closest('#pl-area')) S.sucio = true; });
+document.addEventListener('change', e => { if (e.target.closest && e.target.closest('#pl-area')) S.sucio = true; });
+window.addEventListener('beforeunload', e => { if (S.sucio) { e.preventDefault(); e.returnValue = ''; } });
+function seguirSinGuardar() {
+  if (!S.sucio) return true;
+  if (confirm('Tiene calificaciones escritas que AÚN NO SE HAN GUARDADO.\n\nAceptar = descartarlas y continuar\nCancelar = volver para guardarlas')) { S.sucio = false; return true; }
+  return false;
+}
+function restaurarPlanilla() {
+  const c = S.pl && S.pl.ctx; if (!c) return;
+  $('pl-jor').value = c.jornada; $('pl-gra').value = c.grado; $('pl-par').value = c.paralelo; $('pl-trim').value = c.trimestre;
+  if (c.asignatura) $('pl-asig').value = c.asignatura; if (c.corteId) $('pl-corte').value = c.corteId;
+  if (S.pl.sub) { S.sub = S.pl.sub; [...$('pl-subs').querySelectorAll('button')].forEach(b => b.className = 'btn ' + (b.getAttribute('onclick').includes(`'${S.sub}'`) ? 'btn-primary' : 'btn-sec')); }
+}
 function plCtx() {
   return { jornada: $('pl-jor').value, grado: $('pl-gra').value, paralelo: $('pl-par').value, asignatura: $('pl-asig').value, trimestre: Number($('pl-trim').value), corteId: $('pl-corte').value };
 }
 function plCambio(cargar) {
+  if (cargar && !seguirSinGuardar()) return restaurarPlanilla();
   const pf = S.cat.perfil, g = $('pl-gra').value, p = $('pl-par').value;
   const asigs = pf.asignaturasPorGrado[g] || [], prev = $('pl-asig').value;
   $('pl-asig').innerHTML = opts(asigs, asigs.includes(prev) ? prev : asigs[0]);
@@ -2334,6 +2522,8 @@ function plCambio(cargar) {
   // OVP: la registra quien la tiene en el distributivo; el tutor solo si nadie la tiene asignada en su curso
   if (tutor && pf.ovpDelTutor && tipoA !== 'OVP' && [8, 9, 10].includes(ordenG(g))) subs.push(['ovp', '🧭 Orientación Vocacional y Profesional (sin docente asignado)']);
   if (!subs.find(s => s[0] === S.sub)) S.sub = subs[0][0];
+  subs = subs.filter(x => !(S.cat.bloqueos || []).includes(SUB_FUN[x[0]])); // v4.17: funciones bloqueadas por el Administrador
+  if (subs.length && !subs.some(x => x[0] === S.sub)) S.sub = subs[0][0];
   $('pl-subs').innerHTML = subs.map(s => `<button onclick="S.sub='${s[0]}';plCambio(true)" class="btn ${S.sub === s[0] ? 'btn-primary' : 'btn-sec'}">${s[1]}</button>`).join('');
   // Las boletas (informes de aprendizaje por estudiante) las emite Rectorado (Art. 4 lit. e del Acuerdo 82-A).
   const inf = [];
@@ -2344,8 +2534,11 @@ function plCambio(cargar) {
   // v4.11: el docente con varias asignaturas en el curso (p. ej. docente de aula) puede sacar varias a la vez
   if (!tipoA && !esIni(g) && (pf.asignaturasPorGrado[g] || []).filter(a => !esCualArt9(a)).length > 1) inf.push(['varias', '📚 Informe de varias asignaturas', 'btn-ok']);
   if (tutor) inf.push(['cual:AIA', '⭐ Informe de Acompañamiento Integral', 'btn-ok']);
+  // v4.17: consulta (solo lectura) de las calificaciones de todo el curso
+  if (!esIni(g) && !(S.cat.bloqueos || []).includes('D_CONSULTA')) inf.push(['curso:T', '📖 Calificaciones del curso (trimestre)', 'btn-sec'], ['curso:A', '📖 Calificaciones del curso (año lectivo)', 'btn-sec']);
+  if ((S.cat.bloqueos || []).includes('D_INFORMES')) inf.splice(0, inf.length, ...inf.filter(i => i[0].startsWith('curso:')));
   if (tutor && pf.ovpDelTutor && tipoA !== 'OVP' && [8, 9, 10].includes(ordenG(g))) inf.push(['cual:OVP', '🧭 Informe de Orientación Vocacional', 'btn-ok']);
-  $('pl-informes').innerHTML = inf.map(i => `<button onclick="${i[0].startsWith('obs:') ? `abrirObservaciones('${i[0].slice(4)}')` : (i[0].startsWith('cual:') ? `informeCual('${i[0].slice(5)}')` : (i[0] === 'varias' ? 'abrirVarias()' : `informeDocente('${i[0]}')`))}" class="btn ${i[2]}">${i[1]}</button>`).join('')
+  $('pl-informes').innerHTML = inf.map(i => `<button onclick="${i[0].startsWith('obs:') ? `abrirObservaciones('${i[0].slice(4)}')` : (i[0].startsWith('cual:') ? `informeCual('${i[0].slice(5)}')` : (i[0] === 'varias' ? 'abrirVarias()' : (i[0].startsWith('curso:') ? `consultaCursoDoc(${i[0] === 'curso:A'})` : `informeDocente('${i[0]}')`)))}" class="btn ${i[2]}">${i[1]}</button>`).join('')
     + '<p class="w-full text-[11px] text-slate-500">Las boletas de calificaciones las emite Rectorado.</p>';
   avisoDistributivo();
   if (cargar) plCargar();
@@ -2357,22 +2550,24 @@ function banner(d) {
   b.innerHTML = `${ok ? '✏️ EDICIÓN HABILITADA' : (okX ? '🔁 SOLO ' + que : '👁️ SOLO CONSULTA')} · ${esc(d.periodo.nombre)} (${esc(d.periodo.inicio)} a ${esc(d.periodo.cierre)}) · ${esc(okX ? extra.motivo : d.permiso.motivo)}`;
 }
 async function plCargar() {
-  const c = plCtx(); S.pl.ctx = c;
+  if (!seguirSinGuardar()) return restaurarPlanilla();
+  const c = plCtx(); S.pl.ctx = c; S.pl.sub = S.sub; S.sucio = false;
+  const seq = ++S.plSeq, vigente = () => seq === S.plSeq; // solo se muestra la ÚLTIMA carga pedida
   $('pl-area').innerHTML = ''; $('pl-acciones').innerHTML = ''; resumenGrab();
   const bloq = bloqueoDistributivo(c);
   if (bloq) { $('pl-area').innerHTML = `<div class="p-5 rounded-2xl bg-red-50 border border-red-300 text-red-900 text-sm font-bold text-center leading-relaxed">${bloq}</div>`; return; }
   await run(async () => {
     if ((S.sub === 'form' || S.sub === 'ini' || S.sub === 'ref') && !c.corteId) throw new Error('Rectoría no ha configurado cortes para este trimestre.');
-    if (S.sub === 'form') renderFormativa(await apiT('apiCargarFormativa', c));
-    else if (S.sub === 'sum') renderSumativa(await apiT('apiCargarSumativa', c));
-    else if (S.sub === 'ini') renderInicial(await apiT('apiCargarInicial', c));
-    else if (S.sub === 'cond') renderConducta(await apiT('apiCargarConducta', c));
-    else if (S.sub === 'ref') renderRefuerzo(await apiT('apiCargarRefuerzo', c));
-    else if (TIPO_SUB[S.sub]) renderCualitativa(await apiT('apiCargarCualitativa', c, TIPO_SUB[S.sub]));
-    else if (S.sub === 'asis') renderAsistencia(await apiT('apiCargarAsistencia', Object.assign(c, { fecha: S.asisFecha || S.cat.hoy })));
-    else if (S.sub === 'efb') { S.efbCtx = c; renderEFB(await apiT('apiCargarEFB', c), 'pl-area', 'pl-acciones'); }
-    else if (S.sub === 'just') renderJustificar(await apiT('apiCargarFaltasTutor', Object.assign(c, { mes: (S.asisFecha || S.cat.hoy).slice(0, 7) })));
-    resumenGrab();
+    if (S.sub === 'form') { const d = await apiT('apiCargarFormativa', c); if (vigente()) renderFormativa(d); }
+    else if (S.sub === 'sum') { const d = await apiT('apiCargarSumativa', c); if (vigente()) renderSumativa(d); }
+    else if (S.sub === 'ini') { const d = await apiT('apiCargarInicial', c); if (vigente()) renderInicial(d); }
+    else if (S.sub === 'cond') { const d = await apiT('apiCargarConducta', c); if (vigente()) renderConducta(d); }
+    else if (S.sub === 'ref') { const d = await apiT('apiCargarRefuerzo', c); if (vigente()) renderRefuerzo(d); }
+    else if (TIPO_SUB[S.sub]) { const d = await apiT('apiCargarCualitativa', c, TIPO_SUB[S.sub]); if (vigente()) renderCualitativa(d); }
+    else if (S.sub === 'asis') { const d = await apiT('apiCargarAsistencia', Object.assign(c, { fecha: S.asisFecha || S.cat.hoy })); if (vigente()) renderAsistencia(d); }
+    else if (S.sub === 'efb') { S.efbCtx = c; const d = await apiT('apiCargarEFB', c); if (vigente()) renderEFB(d, 'pl-area', 'pl-acciones'); }
+    else if (S.sub === 'just') { const d = await apiT('apiCargarFaltasTutor', Object.assign(c, { mes: (S.asisFecha || S.cat.hoy).slice(0, 7) })); if (vigente()) renderJustificar(d); }
+    if (vigente()) { resumenGrab(); S.sucio = false; }
   });
 }
 function sinEstudiantes() { $('pl-area').innerHTML = '<p class="text-center text-slate-400 py-6 text-xs">No hay estudiantes matriculados en este curso y paralelo.</p>'; }
@@ -2452,7 +2647,7 @@ async function guardarCualitativa() {
     if (inc && !confirm(`${inc} estudiante(s) tienen habilidades sin registrar. El lineamiento evalúa siempre las 9 habilidades (si no hubo observaciones, corresponde "Frecuentemente"). ¿Guardar de todas formas?`)) return;
   }
   let ok = false;
-  await run(async () => { const r = await apiT('apiGuardarCualitativa', S.pl.ctx, d.tipo, filas); toast(r.mensaje, 'ok'); ok = true; });
+  await run(async () => { const r = await apiT('apiGuardarCualitativa', S.pl.ctx, d.tipo, filas); toast(r.mensaje, 'ok'); ok = true; S.sucio = false; });
   if (ok) plCargar();
 }
 async function informeCual(tipo) {
@@ -2571,7 +2766,7 @@ async function guardarFormativa() {
     id: e.id, insumos: Array.from({ length: NI }, (_, k) => ({ f: qf(i, k, 'f').value.trim(), r: qf(i, k, 'chk').checked ? qf(i, k, 'r').value.trim() : '' }))
   }));
   let ok = false;
-  await run(async () => { const r = await apiT('apiGuardarFormativa', S.pl.ctx, filas); toast(r.mensaje, 'ok'); ok = true; });
+  await run(async () => { const r = await apiT('apiGuardarFormativa', S.pl.ctx, filas); toast(r.mensaje, 'ok'); ok = true; S.sucio = false; });
   if (ok) plCargar();
 }
 async function guardarComunicaciones() {
@@ -2634,7 +2829,7 @@ async function guardarSumativa() {
   if ($('pl-area').querySelector('.invalida')) return toast('Corrija los valores marcados en rojo (0 a 10).', 'err');
   const filas = S.pl.data.estudiantes.map((e, i) => ({ id: e.id, sumativa: $('ss-' + i).value.trim(), aplicaMejora: $('sm-' + i).checked, mejora: $('sv-' + i).value.trim() }));
   let ok = false;
-  await run(async () => { const r = await apiT('apiGuardarSumativa', S.pl.ctx, filas); toast(r.mensaje, 'ok'); ok = true; });
+  await run(async () => { const r = await apiT('apiGuardarSumativa', S.pl.ctx, filas); toast(r.mensaje, 'ok'); ok = true; S.sucio = false; });
   if (ok) plCargar();
 }
 
@@ -2678,7 +2873,7 @@ async function guardarInicial() {
   const ambs = Array.from({ length: ND }, (_, k) => $('da-' + k).value.trim());
   const filas = S.pl.data.estudiantes.map((e, i) => ({ id: e.id, valores: [...$('pl-area').querySelectorAll(`select[data-i="${i}"]`)].map(s => s.value), obs: $('io-' + i).value }));
   let ok = false;
-  await run(async () => { const r = await apiT('apiGuardarInicial', S.pl.ctx, desc, filas, ambs); toast(r.mensaje, 'ok'); ok = true; });
+  await run(async () => { const r = await apiT('apiGuardarInicial', S.pl.ctx, desc, filas, ambs); toast(r.mensaje, 'ok'); ok = true; S.sucio = false; });
   if (ok) plCargar();
 }
 
@@ -2696,7 +2891,7 @@ function renderConducta(d) {
 async function guardarConducta() {
   const filas = S.pl.data.estudiantes.map((e, i) => ({ id: e.id, conducta: $('kc-' + i).value, obs: $('ko-' + i).value }));
   let ok = false;
-  await run(async () => { const r = await apiT('apiGuardarConducta', S.pl.ctx, filas); toast(r.mensaje, 'ok'); ok = true; });
+  await run(async () => { const r = await apiT('apiGuardarConducta', S.pl.ctx, filas); toast(r.mensaje, 'ok'); ok = true; S.sucio = false; });
   if (ok) plCargar();
 }
 
@@ -2744,7 +2939,7 @@ async function guardarRefuerzo() {
   const NR = S.pl.data.nRefuerzos;
   const filas = S.pl.data.estudiantes.map((e, i) => ({ id: e.id, rf: Array.from({ length: NR }, (_, k) => $(`rf-${i}-${k}`).value.trim()), estrategia: $('rest-' + i).value, obs: $('robs-' + i).value }));
   let ok = false;
-  await run(async () => { const r = await apiT('apiGuardarRefuerzo', S.pl.ctx, filas); toast(r.mensaje, 'ok'); ok = true; });
+  await run(async () => { const r = await apiT('apiGuardarRefuerzo', S.pl.ctx, filas); toast(r.mensaje, 'ok'); ok = true; S.sucio = false; });
   if (ok) plCargar();
 }
 
