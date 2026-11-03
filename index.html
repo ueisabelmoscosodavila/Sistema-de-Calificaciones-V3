@@ -70,10 +70,22 @@
     .rep.a5 .ficha{padding:2px 5px;margin-top:3px}
     .rep .sfon{display:inline-block;min-width:14px;padding:0 2px;border-radius:2px;font-weight:700}
     .rep .sf-S{background:#bbf7d0;color:#14532d}.rep .sf-F{background:#bfdbfe;color:#1e3a8a}.rep .sf-O{background:#fef08a;color:#713f12}.rep .sf-N{background:#fecaca;color:#7f1d1d}
+    /* v4.22: boleta TRIMESTRAL a lo ancho y alto de la hoja A5 horizontal */
+    .rep.a5 .pagina.bolT{display:flex;flex-direction:column;min-height:132mm;max-width:none;width:198mm;font-size:8.5px;margin:0 auto;box-sizing:border-box}
+    .rep.a5 .bolT .bolT-cuerpo{flex:1 1 auto;display:flex;flex-direction:column}
+    .rep.a5 .bolT .bolT-cuerpo table{flex:1 1 auto;height:100%;width:100%}
+    .rep.a5 .bolT th,.rep.a5 .bolT td{font-size:7.8px;padding:1px 3px}
+    .rep.a5 .bolT .bolT-cuerpo td{line-height:1.25}
+    .rep .bolT .bolT-nota{font-size:6.5px;color:#334155;margin-top:1px}
+    .rep .bolT .bolT-bajo{margin-top:4px}
+    .rep.a5 .bolT .firmas{margin-top:auto;padding-top:12px}
+    @media screen{.rep.a5 .pagina.bolT{margin-bottom:24px}}
     .rep.a4x2 .hoja2{display:flex;flex-direction:column;width:210mm;margin:0 auto 24px;break-after:page;page-break-after:always}
     .rep.a4x2 .hoja2:last-child{break-after:auto;page-break-after:auto}
     .rep.a4x2 .hoja2 .pagina{width:210mm;height:148.5mm;max-width:none;box-sizing:border-box;padding:6mm;margin:0;overflow:hidden;break-after:auto;page-break-after:auto}
     .rep.a4x2 .hoja2 .pagina + .pagina{border-top:1px dashed #94a3b8}
+    .rep.a4x2 .hoja2 .pagina.bolT{width:210mm;height:148.5mm;min-height:0;font-size:8px}
+    .rep.a4x2 .bolT th,.rep.a4x2 .bolT td{font-size:7px}
     /* v4.10: tabulación y gráficos de informes */
     .rep .graf{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;margin-top:8px;break-inside:avoid}
     .rep .graf svg{border:1px solid #cbd5e1;border-radius:4px;background:#fff}
@@ -90,7 +102,8 @@
       #print-area{position:absolute;left:0;top:0;width:100%;border:none!important;box-shadow:none!important;padding:0!important}
       .no-print{display:none!important}
     }
-  </style>
+    .bloq-ajena { background: #e5e7eb !important; color: #475569 !important; cursor: not-allowed; }
+</style>
   <style id="page-size">@page{size:A4 portrait;margin:10mm}</style>
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased min-h-screen p-2 sm:p-4">
@@ -501,6 +514,19 @@
       </div>
     </div>
 
+    <!-- CORRECCIONES DE CALIFICACIONES (v4.22: Vicerrectorado de la jornada del estudiante o Rectorado; queda registrado quién autorizó) -->
+    <div id="tab-correcciones" class="tab hidden space-y-4">
+      <div class="card space-y-2">
+        <div><h3 class="font-black text-sm">✏️ Corregir calificaciones con error</h3>
+          <p class="text-[11px] text-slate-500">Cada calificación queda registrada con el docente que la ingresó y el docente que la reemplaza <b>no puede modificarla</b> (solo llena las casillas vacías). Si hay un error, lo corrige aquí el <b>Vicerrectorado de la jornada del estudiante</b> o el <b>Rectorado</b>, indicando el motivo y quién lo solicitó. Se recalcula el promedio y la nota del trimestre, y queda guardado <b>quién autorizó</b>. Funciona aunque el trimestre esté cerrado.</p></div>
+        <div class="flex flex-wrap gap-2 items-end"><div class="flex-1 min-w-[220px]"><label class="lbl">Buscar estudiante (nombre o cédula)</label><input id="co-q" class="inp" onkeydown="if(event.key==='Enter')buscarEstCorr()"></div>
+          <div><label class="lbl">Trimestre</label><select id="co-trim" class="inp"><option value="1">1°</option><option value="2">2°</option><option value="3">3°</option></select></div>
+          <button onclick="buscarEstCorr()" class="btn btn-primary">🔎 Buscar</button></div>
+        <div id="co-res"></div>
+        <div id="co-est"></div>
+      </div>
+    </div>
+
     <!-- CIERRE DE TRIMESTRE (v4.17: Vicerrectorado cierra tras la junta de curso; solo Rectorado reabre) -->
     <div id="tab-cierretrim" class="tab hidden card space-y-3">
       <div><h3 class="font-black text-sm">🔒 Cierre de trimestre (después de la junta de curso)</h3>
@@ -521,7 +547,25 @@
           <button onclick="guardarPermisos()" class="btn btn-primary">💾 Guardar permisos</button></div>
         <div id="pm-area" class="overflow-x-auto"></div>
       </div>
+      <div class="card space-y-2">
+        <div><h3 class="font-black text-sm">🧾 Historial de calificaciones (solo Administrador)</h3>
+          <p class="text-[11px] text-slate-500">Cambios de notas ya registradas: <b>DOCENTE</b> (el mismo docente cambió su nota dentro de las fechas) y <b>CORRECCION</b> (corregida por Vicerrectorado o Rectorado, con motivo, quién solicitó y quién autorizó).</p></div>
+        <div class="flex flex-wrap gap-2 items-end">
+          <div><label class="lbl">Tipo</label><select id="hc-tipo" class="inp"><option value="">Todos</option><option value="CORRECCION">Correcciones autorizadas</option><option value="DOCENTE">Cambios del docente</option></select></div>
+          <div><label class="lbl">Jornada</label><select id="hc-jor" class="inp"><option value="">Todas</option><option>Matutina</option><option>Vespertina</option></select></div>
+          <div><label class="lbl">Desde</label><input id="hc-desde" type="date" class="inp"></div><div><label class="lbl">Hasta</label><input id="hc-hasta" type="date" class="inp"></div>
+          <div class="flex-1 min-w-[160px]"><label class="lbl">Estudiante, asignatura, docente…</label><input id="hc-q" class="inp" onkeydown="if(event.key==='Enter')cargarHistorial()"></div>
+          <button onclick="cargarHistorial()" class="btn btn-primary">🔎 Consultar</button><button onclick="cargarHistorial('imprimir')" class="btn btn-sec">🖨️</button><button onclick="cargarHistorial('excel')" class="btn btn-ok">⬇️ Excel</button></div>
+        <div id="hc-area" class="text-xs"></div>
+      </div>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="card space-y-2 lg:col-span-2">
+          <h3 class="font-black text-sm">👥 Docentes y estudiantes duplicados</h3>
+          <p class="text-[11px] text-slate-500">Busca registros con la <b>misma cédula</b> o el <b>mismo nombre</b>. <b>Eliminar</b> solo se permite si el registro no tiene ningún dato (notas, asistencia, distributivo…). Si tiene datos, marque el registro <b>correcto</b> y pulse <b>Fusionar</b>: todo lo del duplicado pasa al correcto y el duplicado se retira. La ficha retirada queda respaldada en la hoja "Duplicados_Respaldo".</p>
+          <div class="flex flex-wrap gap-2 items-end"><div><label class="lbl">Buscar en</label><select id="dp-tipo" class="inp"><option value="ESTUDIANTE">Estudiantes</option><option value="DOCENTE">Docentes</option></select></div>
+            <button onclick="buscarDupPersonas()" class="btn btn-primary">🔎 Buscar duplicados</button></div>
+          <div id="dp-area" class="text-xs"></div>
+        </div>
         <div class="card space-y-2">
           <h3 class="font-black text-sm">🧹 Revisar calificaciones duplicadas</h3>
           <p class="text-[11px] text-slate-500">Comprueba que cada calificación tenga un solo registro (estudiante + periodo + curso + asignatura). Con "Corregir", deja el más reciente y respalda los demás en la hoja "Duplicados_Respaldo".</p>
@@ -555,6 +599,13 @@
 <div class="border-t pt-2 space-y-1 solo-admin hidden">
           <div class="flex justify-between items-center"><div class="font-black text-xs">💾 Estado de respaldos</div><button onclick="cargarRespaldos('rs-inst')" class="btn btn-sec py-1">🔄</button></div>
           <div id="rs-inst" class="text-[11px]"></div>
+        </div>
+        <div class="border-t pt-2 space-y-1 solo-rectora hidden">
+          <div class="font-black text-xs">👥 Docentes y estudiantes duplicados (consulta)</div>
+          <p class="text-[11px] text-slate-600">Muestra registros con la misma cédula o el mismo nombre. Eliminar o fusionar lo hace solo el Administrador del sistema.</p>
+          <div class="flex flex-wrap gap-2 items-end"><select id="dp-tipo-r" class="inp w-auto"><option value="ESTUDIANTE">Estudiantes</option><option value="DOCENTE">Docentes</option></select>
+            <button onclick="buscarDupPersonas('r')" class="btn btn-sec">🔎 Buscar duplicados</button></div>
+          <div id="dp-area-r" class="text-xs"></div>
         </div>
         <div class="border-t pt-2 space-y-1">
           <div class="font-black text-xs">🧹 Revisar calificaciones duplicadas</div>
@@ -747,13 +798,14 @@
 <div id="m-bol" class="hidden fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50">
   <div class="bg-white max-w-md w-full p-5 rounded-3xl space-y-3 text-xs">
     <h3 class="font-black text-sm">🧾 Imprimir boletas de calificaciones</h3>
-    <p class="text-slate-600">Elija el curso. La boleta muestra todas las asignaturas del año lectivo con el 1°, 2° y 3° trimestre, el comportamiento y la asistencia.</p>
+    <p class="text-slate-600">Elija el curso y el tipo de boleta. <b>Trimestral</b>: por asignatura el promedio de los insumos (70 %) y el proyecto interdisciplinar (30 %) del trimestre, con el comportamiento y la asistencia debajo. <b>Anual</b>: todas las asignaturas con el 1°, 2° y 3° trimestre y el promedio anual.</p>
     <div class="grid grid-cols-2 gap-2">
       <div><label class="lbl">Jornada</label><select id="bo-jor" class="inp" onchange="boEstudiantes()"></select></div>
       <div><label class="lbl">Año de básica / curso</label><select id="bo-gra" class="inp" onchange="boEstudiantes()"></select></div>
       <div><label class="lbl">Paralelo</label><select id="bo-par" class="inp" onchange="boEstudiantes()"></select></div>
       <div class="col-span-2"><label class="lbl">Tamaño de impresión</label><select id="bo-papel" class="inp"><option value="A5">Una boleta por hoja A5</option><option value="A4x2">Dos boletas por hoja A4 (con línea de corte)</option></select></div>
-      <div><label class="lbl">Hasta el trimestre</label><select id="bo-trim" class="inp"></select></div>
+      <div><label class="lbl">Tipo de boleta</label><select id="bo-modo" class="inp" onchange="$('bo-trim-l').textContent = this.value === 'ANUAL' ? 'Hasta el trimestre' : 'Trimestre'"><option value="TRIMESTRAL">Trimestral (70 % + 30 %)</option><option value="ANUAL">Anual (1°, 2° y 3° trimestre)</option></select></div>
+      <div><label class="lbl" id="bo-trim-l">Trimestre</label><select id="bo-trim" class="inp"></select></div>
       <div class="col-span-2"><label class="lbl">Estudiante</label><select id="bo-est" class="inp"></select></div>
     </div>
     <div class="flex gap-2"><button onclick="cerrarModal('m-bol')" class="btn bg-slate-100 w-1/2">Cancelar</button>
@@ -1075,7 +1127,7 @@ api('apiInfoPublica').then(i => {
   revisarVersion(i.version);
 }).catch(() => {});
 // ---- v4.20: la página se actualiza sola cuando hay una versión nueva del sistema ----
-const VERSION_CLIENTE = '4.20';
+const VERSION_CLIENTE = '4.22';
 function revisarVersion(v) {
   if (!v || v === VERSION_CLIENTE || EN_APPS_SCRIPT) return;
   if (S.sucio) return; // nunca se recarga con notas sin guardar
@@ -1187,9 +1239,9 @@ function iniciarApp() {
   const R = S.ses.rol;
   let tabs = R === 'DOCENTE' ? [['planilla', '📝 Mis calificaciones']]
     : R === 'ADMINISTRADOR' ? [['permisos', '🛡️ Permisos y herramientas'], ['institucion', '🏫 Institución']]
-    : R === 'RECTORA' ? [['estudiantes', '🎒 Estudiantes'], ['docentes', '👨‍🏫 Docentes'], ['optativas', '🎓 Optativas BGU'], ['periodos', '📅 Fechas, cortes y bloqueos'], ['informes', '📊 Informes'], ['seguimiento', '⚠️ Seguimiento y cumplimiento'], ['inasistencias', '🚨 Inasistencias'], ['efb', '🎓 Evaluación final de Bachillerato'], ['malla', '📋 Distributivo'], ['consulta', '📖 Consulta de calificaciones'], ['proyectos', '🧩 Proyectos interdisciplinarios'], ['mejoras', '📝 Mejoras'], ['cierretrim', '🔒 Cierre de trimestre'], ['institucion', '🏫 Institución'], ['cierre', '🎓 Cierre del año']]
+    : R === 'RECTORA' ? [['estudiantes', '🎒 Estudiantes'], ['docentes', '👨‍🏫 Docentes'], ['optativas', '🎓 Optativas BGU'], ['periodos', '📅 Fechas, cortes y bloqueos'], ['informes', '📊 Informes'], ['seguimiento', '⚠️ Seguimiento y cumplimiento'], ['inasistencias', '🚨 Inasistencias'], ['efb', '🎓 Evaluación final de Bachillerato'], ['malla', '📋 Distributivo'], ['consulta', '📖 Consulta de calificaciones'], ['proyectos', '🧩 Proyectos interdisciplinarios'], ['mejoras', '📝 Mejoras'], ['correcciones', '✏️ Correcciones'], ['cierretrim', '🔒 Cierre de trimestre'], ['institucion', '🏫 Institución'], ['cierre', '🎓 Cierre del año']]
     : esInspeccion() ? [['inasistencias', '🚨 Inasistencias y justificaciones']]
-    : [['estudiantes', '🎒 Estudiantes'], ['optativas', '🎓 Optativas BGU'], ['informes', '📊 Informes'], ['seguimiento', '⚠️ Seguimiento y cumplimiento'], ['efb', '🎓 Evaluación final de Bachillerato'], ['malla', '📋 Distributivo'], ['consulta', '📖 Consulta de calificaciones'], ['proyectos', '🧩 Proyectos interdisciplinarios'], ['mejoras', '📝 Mejoras'], ['cierretrim', '🔒 Cierre de trimestre']];
+    : [['estudiantes', '🎒 Estudiantes'], ['optativas', '🎓 Optativas BGU'], ['informes', '📊 Informes'], ['seguimiento', '⚠️ Seguimiento y cumplimiento'], ['efb', '🎓 Evaluación final de Bachillerato'], ['malla', '📋 Distributivo'], ['consulta', '📖 Consulta de calificaciones'], ['proyectos', '🧩 Proyectos interdisciplinarios'], ['mejoras', '📝 Mejoras'], ['correcciones', '✏️ Correcciones'], ['cierretrim', '🔒 Cierre de trimestre']];
   // v4.17: las pestañas de funciones bloqueadas por el Administrador no se muestran
   const bloq = S.cat.bloqueos || [];
   tabs = tabs.filter(t => !bloq.includes(TAB_FUN[t[0]]));
@@ -1201,11 +1253,11 @@ function iniciarApp() {
   irTab(tabs[0][0]);
 }
 
-const TAB_FUN = { consulta: 'CONSULTA', proyectos: 'PROYECTOS', mejoras: 'MEJORAS', estudiantes: 'ESTUDIANTES', docentes: 'DOCENTES', optativas: 'OPTATIVAS', periodos: 'PERIODOS', informes: 'INFORMES', seguimiento: 'SEGUIMIENTO', inasistencias: 'INASISTENCIAS', efb: 'EFB', malla: 'DISTRIBUTIVO', cierretrim: 'CIERRE_TRIM', institucion: 'INSTITUCION', cierre: 'CIERRE_ANIO' };
+const TAB_FUN = { consulta: 'CONSULTA', proyectos: 'PROYECTOS', mejoras: 'MEJORAS', correcciones: 'CORRECCIONES', estudiantes: 'ESTUDIANTES', docentes: 'DOCENTES', optativas: 'OPTATIVAS', periodos: 'PERIODOS', informes: 'INFORMES', seguimiento: 'SEGUIMIENTO', inasistencias: 'INASISTENCIAS', efb: 'EFB', malla: 'DISTRIBUTIVO', cierretrim: 'CIERRE_TRIM', institucion: 'INSTITUCION', cierre: 'CIERRE_ANIO' };
 const SUB_FUN = { proy: 'D_PROYECTO', trans: 'D_PROYECTO', mej: 'D_MEJORA', form: 'D_FORMATIVA', ref: 'D_REFUERZO', sum: 'D_SUMATIVA', ini: 'D_DESTREZAS', aia: 'D_CUALITATIVA', lec: 'D_CUALITATIVA', opt: 'D_CUALITATIVA', ovp: 'D_CUALITATIVA', asis: 'D_ASISTENCIA', just: 'D_ASISTENCIA', efb: 'D_EFB' };
 const esRect = () => S.ses && S.ses.rol === 'RECTORA';
 // ---- v4.18: "Solo ver" asignado por el Administrador: la pestaña se muestra sin botones de guardar (el servidor también lo impide) ----
-const RX_ACCION = /guardar|agregar|quitar|eliminar|importar|asignar|autorizar|anular|cerrar|reabrir|toggleBloqueo|nuevo|abrirEstudiante|abrirDocente|reset|respald|recalcular|revisarDuplicados|generarCortes|darBaja|reactivar|editar|registrar|confirmarBaja|cierreGuardar|activar/i;
+const RX_ACCION = /guardar|corregir|formCorr|agregar|quitar|eliminar|importar|asignar|autorizar|anular|cerrar|reabrir|toggleBloqueo|nuevo|abrirEstudiante|abrirDocente|reset|respald|recalcular|revisarDuplicados|generarCortes|darBaja|reactivar|editar|registrar|confirmarBaja|cierreGuardar|activar/i;
 function enLectura(tab) { return (S.cat && (S.cat.lectura || []).includes(TAB_FUN[tab])); }
 function aplicarLectura() {
   if (!S.cat || !(S.cat.lectura || []).length) return;
@@ -1213,16 +1265,16 @@ function aplicarLectura() {
     const id = t.id.replace('tab-', '');
     if (!enLectura(id) || t.classList.contains('hidden')) return;
     t.querySelectorAll('button').forEach(b => { if (RX_ACCION.test(b.getAttribute('onclick') || '')) b.classList.add('hidden'); });
-    if (id === 'institucion') t.querySelectorAll('input, select, textarea').forEach(x => x.disabled = true); // v4.19: Institución en "Solo ver"
+    if (id === 'institucion') t.querySelectorAll('input, select, textarea').forEach(x => x.disabled = true); if (id === 'institucion' && $('dp-tipo-r')) $('dp-tipo-r').disabled = false; // v4.19: Institución en "Solo ver"
     if (!t.querySelector('.aviso-lectura')) t.insertAdjacentHTML('afterbegin', '<div class="aviso-lectura p-2 mb-2 rounded-xl bg-slate-100 border text-xs font-bold text-slate-700">👁️ Solo lectura (asignado por el Administrador del sistema): puede consultar, pero no guardar cambios.</div>');
   });
   if (S.ses && S.ses.rol === 'DOCENTE' && (S.cat.lectura || []).includes(SUB_FUN[S.sub]) && $('pl-acciones')) $('pl-acciones').querySelectorAll('button').forEach(b => { if (RX_ACCION.test(b.getAttribute('onclick') || '')) b.classList.add('hidden'); });
 }
 new MutationObserver(() => { clearTimeout(S._lt); S._lt = setTimeout(aplicarLectura, 30); }).observe(document.body, { childList: true, subtree: true });
 const ON_TAB = {
-  permisos: () => { cargarPermisos(); cargarRespaldos('rs-adm'); }, cierretrim: () => iniCierreTrim(), consulta: () => iniConsulta2(), proyectos: () => iniProyectos(), mejoras: () => iniMejoras(),
+  permisos: () => { cargarPermisos(); cargarRespaldos('rs-adm'); iniHistorial(); }, cierretrim: () => iniCierreTrim(), consulta: () => iniConsulta2(), proyectos: () => iniProyectos(), mejoras: () => iniMejoras(), correcciones: () => iniCorrecciones(),
   estudiantes: () => cargarEstudiantes(), docentes: () => cargarDocentes(), periodos: () => { renderPeriodos(); cargarDesbloqueos(); },
-  optativas: () => cargarOptativas(), inasistencias: () => cargarInasistencias(), cierre: () => cargarCierre(), efb: () => iniEFB(), malla: () => iniMalla(), informes: () => { cargarAnios(); infCurso(); }, seguimiento: () => cumCortes(), institucion: () => { cargarInstitucion(); if (S.ses.rol === 'ADMINISTRADOR') cargarRespaldos('rs-inst'); }, planilla: () => initPlanilla()
+  optativas: () => cargarOptativas(), inasistencias: () => cargarInasistencias(), cierre: () => cargarCierre(), efb: () => iniEFB(), malla: () => iniMalla(), informes: () => { cargarAnios(); infCurso(); }, seguimiento: () => cumCortes(), institucion: () => { cargarInstitucion(); if (S.ses.rol === 'ADMINISTRADOR') cargarRespaldos('rs-inst'); if ($('dp-area-r')) $('dp-area-r').innerHTML = ''; }, planilla: () => initPlanilla()
 };
 function irTab(t) {
   if (t !== 'informes' && S.anioArch) { S.anioArch = ''; if ($('inf-anio')) $('inf-anio').value = ''; avisoAnio(); }
@@ -1931,6 +1983,117 @@ async function respaldarAhora(area) {
   cargarRespaldos(area);
 }
 async function activarAutomaticos(area) { await run(async () => { const r = await apiT('apiActivarAutomaticos'); toast(r.mensaje, 'ok'); }); cargarRespaldos(area); }
+// ---- v4.22: casillas registradas por otro docente (cambio de docente): se muestran en gris y no se modifican ----
+function bloquearAjenas(fn, d) {
+  const L = (d && d.estudiantes) || [], A = $('pl-area'); if (!A || !L.length) return;
+  let n = 0;
+  const off = el => { if (el && !el.disabled) { el.disabled = true; el.classList.add('bloq-ajena'); n++; } };
+  L.forEach((e, i) => {
+    if (fn === 'renderProyecto') { if (e.bloqDisc) off($('pd-' + i)); return; }
+    (e.bloq || []).forEach(c => {
+      if (fn === 'renderFormativa') { const k = Number(c.slice(1)) - 1; if (c[0] === 'F') off(qf(i, k, 'f')); else { off(qf(i, k, 'r')); off(qf(i, k, 'chk')); } }
+      else if (fn === 'renderSumativa') off($('ss-' + i));
+      else if (fn === 'renderRefuerzo') off($('rf-' + i + '-' + (Number(c.slice(2)) - 1)));
+      else if (fn === 'renderInicial') off(A.querySelector(`select[data-i="${i}"][data-k="${Number(c.slice(1)) - 1}"]`));
+      else if (fn === 'renderCualitativa') off(c === 'Calificacion' ? $('qc-' + i) : A.querySelector(`select[data-i="${i}"][data-k="${Number(c.slice(1)) - 1}"]`));
+    });
+  });
+  if (n && !A.querySelector('.aviso-ajenas')) A.insertAdjacentHTML('afterbegin', '<div class="aviso-ajenas text-[11px] mb-2 bg-slate-100 border rounded-xl p-2">🔒 Las casillas en gris fueron registradas por otro docente y no se pueden modificar; puede llenar las vacías. Si hay un error, lo corrige Vicerrectorado o Rectorado.</div>');
+}
+['renderFormativa', 'renderSumativa', 'renderRefuerzo', 'renderInicial', 'renderCualitativa', 'renderProyecto'].forEach(fn => {
+  const f = window[fn]; if (typeof f !== 'function') return;
+  window[fn] = function (d) { const r = f.apply(this, arguments); try { bloquearAjenas(fn, d); } catch (e) { console.log(e); } return r; };
+});
+// ---- v4.22: correcciones (Vicerrectorado de la jornada del estudiante / Rectorado) ----
+function iniCorrecciones() { }
+async function buscarEstCorr() {
+  await run(async () => {
+    const l = await apiT('apiBuscarEstudianteCorr', $('co-q').value);
+    $('co-res').innerHTML = l.length ? `<div class="flex flex-wrap gap-1">${l.map(e => `<button onclick="cargarNotasCorr('${esc(e.id)}')" class="btn btn-sec py-1 text-[11px]">${esc(e.nombres)} · ${esc(e.grado + ' ' + e.paralelo)} · ${esc(e.jornada)}${e.estado === 'RETIRADO' ? ' (retirado)' : ''}</button>`).join('')}</div>` : '<p class="text-slate-400 text-xs">Sin resultados.</p>';
+    $('co-est').innerHTML = '';
+  });
+}
+async function cargarNotasCorr(id) {
+  await run(async () => {
+    const r = await apiT('apiCargarNotasCorr', id, $('co-trim').value); S.co = r;
+    const e = r.estudiante;
+    $('co-est').innerHTML = `<div class="border rounded-2xl p-3 space-y-2 bg-white">
+      <div class="font-black text-xs">${esc(e.nombres)} · Cédula ${esc(e.cedula)} · ${esc(e.grado + ' ' + e.paralelo)} · ${esc(e.jornada)} · ${esc($('co-trim').value)}° trimestre</div>
+      ${r.bloques.map((b, bi) => `<details class="border rounded-xl"><summary class="cursor-pointer p-2 text-xs font-bold bg-slate-50">${esc(b.etiqueta)}</summary>
+        <div class="overflow-x-auto p-2"><table class="w-full planilla text-[11px]"><thead class="bg-slate-100"><tr><th>Casilla</th><th>Valor actual</th><th class="text-left">Registrado por</th><th></th></tr></thead><tbody>
+        ${b.campos.map((c, ci) => `<tr><td class="font-mono">${esc(c.campo)}</td><td class="font-bold">${esc(c.valor) || '—'}</td><td style="text-align:left">${esc(c.autor) || '—'}</td><td><button onclick="formCorr(${bi},${ci})" class="btn btn-sec py-1">✏️ Corregir</button></td></tr>`).join('')}</tbody></table></div></details>`).join('') || '<p class="text-slate-400 text-xs">El estudiante no tiene calificaciones registradas en este trimestre.</p>'}
+      <div id="co-form"></div></div>`;
+  });
+}
+function formCorr(bi, ci) {
+  const b = S.co.bloques[bi], c = b.campos[ci];
+  const ayuda = b.tipo === 'num' ? 'Nota de 0 a 10' : (b.tipo === 'letra' ? 'Letra A+ … E- (o NE)' : (c.campo === 'Calificacion' ? 'Letra A+ … E-' : 'S, F, O o N'));
+  $('co-form').innerHTML = `<div class="bg-amber-50 border border-amber-200 rounded-xl p-3 grid grid-cols-2 sm:grid-cols-4 gap-2 items-end text-xs">
+    <div class="col-span-2 sm:col-span-4 font-black">Corregir ${esc(b.etiqueta)} – casilla ${esc(c.campo)} (actual: ${esc(c.valor) || 'vacío'}, registrado por ${esc(c.autor) || '—'})</div>
+    <div><label class="lbl">Valor correcto (${ayuda})</label><input id="cf-val" class="inp" value="${esc(c.valor)}"></div>
+    <div class="col-span-1 sm:col-span-3"><label class="lbl">Motivo de la corrección</label><input id="cf-mot" class="inp" placeholder="Ej.: error de digitación del docente"></div>
+    <div class="col-span-2"><label class="lbl">Solicitado por (nombre y cargo)</label><input id="cf-sol" class="inp"></div>
+    <div class="col-span-2"><label class="lbl">Observación (N° de oficio, documento de respaldo…)</label><input id="cf-obs" class="inp"></div>
+    <button onclick="corregirNota(${bi},${ci})" class="btn btn-ok col-span-2 sm:col-span-1">✔ Autorizar corrección</button></div>`;
+}
+async function corregirNota(bi, ci) {
+  const b = S.co.bloques[bi], c = b.campos[ci];
+  if (!confirm('¿Autoriza la corrección de ' + c.campo + ': ' + (c.valor || 'vacío') + ' → ' + ($('cf-val').value || 'vacío') + '? Quedará registrado con su nombre.')) return;
+  await run(async () => { const r = await apiT('apiCorregirNota', { hoja: b.hoja, clave: b.clave, campo: c.campo, valor: $('cf-val').value, motivo: $('cf-mot').value, solicitadoPor: $('cf-sol').value, observacion: $('cf-obs').value }); toast(r.mensaje, 'ok'); });
+  cargarNotasCorr(S.co.estudiante.id);
+}
+// ---- v4.22: historial de calificaciones (solo Administrador) ----
+function iniHistorial() { if ($('hc-area')) $('hc-area').innerHTML = ''; }
+async function cargarHistorial(modo) {
+  await run(async () => {
+    const l = await apiT('apiHistorialCalif', { tipo: $('hc-tipo').value, jornada: $('hc-jor').value, desde: $('hc-desde').value, hasta: $('hc-hasta').value, texto: $('hc-q').value });
+    const cab = ['Fecha', 'Tipo', 'Estudiante', 'Curso', 'Jornada', 'Asignatura', 'Periodo', 'Casilla', 'Valor anterior', 'Valor nuevo', 'Registró / docente', 'Usuario', 'Motivo', 'Solicitado por', 'Autorizado por'];
+    const fila = h => [h.Fecha, h.Tipo === 'CORRECCION' ? 'Corrección autorizada' : 'Cambio del docente', h.Estudiante, h.Curso, h.Jornada, h.Asignatura, h.Periodo, h.Campo, h.Valor_Anterior, h.Valor_Nuevo, h.Responsable, h.Usuario, h.Motivo, h.Solicitado_Por, h.Autorizado_Por];
+    if (modo === 'excel') {
+      if (typeof XLSX === 'undefined') return;
+      const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([cab].concat(l.map(fila))), 'Historial'); XLSX.writeFile(wb, 'Historial_de_calificaciones.xlsx'); return;
+    }
+    if (modo === 'imprimir') return mostrarReporte({ tipo: 'historial', filas: l, filtros: { jornada: $('hc-jor').value || 'Todas' }, inst: S.cat.inst, params: S.cat.params, emitido: S.cat.hoy, emisor: S.ses.nombre });
+    $('hc-area').innerHTML = `<div class="font-bold mb-1">${l.length} registro(s)</div><div class="overflow-x-auto border rounded-2xl max-h-[480px]"><table class="w-full planilla text-[11px]"><thead class="bg-slate-100"><tr>${cab.map(x => `<th>${x}</th>`).join('')}</tr></thead><tbody>
+      ${l.map(h => `<tr class="${h.Tipo === 'CORRECCION' ? 'bg-amber-50' : ''}">${fila(h).map((v, k) => `<td style="${[2, 5, 10, 12, 13, 14].includes(k) ? 'text-align:left' : ''}" class="${k === 9 ? 'font-bold' : ''}">${esc(v)}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${cab.length}" class="text-slate-400 py-3">Sin registros.</td></tr>`}</tbody></table></div>`;
+  });
+}
+// ---- v4.21: docentes y estudiantes duplicados (Administrador) ----
+async function buscarDupPersonas(modo) {
+  const soloVer = modo === 'r' || S.ses.rol !== 'ADMINISTRADOR'; // v4.22: Rectorado solo consulta
+  await run(async () => {
+    const r = await apiT('apiBuscarDuplicadosPersonas', $(modo === 'r' ? 'dp-tipo-r' : 'dp-tipo').value); S.dp = r;
+    if (soloVer) {
+      $('dp-area-r').innerHTML = r.grupos.length ? r.grupos.map(g => `<div class="border rounded-xl p-2 mt-2 bg-white"><div class="font-black mb-1">${esc(g.motivo)}</div>
+        <table class="w-full planilla"><thead class="bg-slate-50"><tr><th class="text-left">Nombre</th><th>Cédula</th><th class="text-left">Datos</th><th>Estado</th><th class="text-left">Registros asociados</th></tr></thead><tbody>
+        ${g.registros.map(x => `<tr><td style="text-align:left" class="font-semibold">${esc(x.nombre)}<br><small class="font-mono">${esc(x.id)}</small></td><td>${esc(x.cedula)}</td><td style="text-align:left">${esc(x.extra)}</td><td>${esc(x.estado || '')}</td>
+          <td style="text-align:left">${x.total ? x.refs.map(y => esc(y.hoja + ': ' + y.filas)).join('<br>') : 'Sin datos'}</td></tr>`).join('')}</tbody></table></div>`).join('') + '<p class="text-[11px] text-slate-500 mt-1">Para eliminar o fusionar, comuníquelo al Administrador del sistema.</p>'
+        : '<p class="text-emerald-700 font-bold mt-2">✅ No se encontraron duplicados.</p>';
+      return;
+    }
+    $('dp-area').innerHTML = r.grupos.length ? r.grupos.map((g, gi) => `<div class="border rounded-xl p-2 mt-2 bg-white"><div class="font-black mb-1">${esc(g.motivo)}</div>
+      <table class="w-full planilla"><thead class="bg-slate-50"><tr><th>Conservar</th><th class="text-left">Nombre</th><th>Cédula</th><th class="text-left">Datos</th><th>Estado</th><th class="text-left">Registros asociados</th><th></th></tr></thead><tbody>
+      ${g.registros.map((x, i) => `<tr><td><input type="radio" name="dp-k-${gi}" value="${esc(x.id)}" ${i === g.registros.reduce((m, y, j, a) => y.total > a[m].total ? j : m, 0) ? 'checked' : ''}></td><td style="text-align:left" class="font-semibold">${esc(x.nombre)}<br><small class="font-mono">${esc(x.id)}</small></td><td>${esc(x.cedula)}</td><td style="text-align:left">${esc(x.extra)}</td><td>${esc(x.estado)}</td>
+        <td style="text-align:left">${x.total ? x.refs.map(y => esc(y.hoja + ': ' + y.filas)).join('<br>') : '<span class="text-emerald-700 font-bold">Sin datos</span>'}</td>
+        <td>${x.total ? '' : `<button onclick="eliminarPersona('${esc(x.id)}','${esc(x.nombre).replace(/'/g, '')}')" class="btn bg-red-50 text-red-700 py-1">🗑 Eliminar</button>`}</td></tr>`).join('')}</tbody></table>
+      <button onclick="fusionarGrupo(${gi})" class="btn btn-warn mt-1">🔗 Fusionar los demás en el marcado</button></div>`).join('') : '<p class="text-emerald-700 font-bold mt-2">✅ No se encontraron duplicados.</p>';
+  });
+}
+async function eliminarPersona(id, nombre) {
+  const c = prompt('Se eliminará a ' + nombre + ' (' + id + ').\nNo tiene datos registrados y su ficha quedará respaldada.\n\nPara confirmar escriba ELIMINAR:');
+  if (c === null) return;
+  await run(async () => { const r = await apiT('apiEliminarPersona', S.dp.tipo, id, c); toast(r.mensaje, 'ok'); });
+  buscarDupPersonas();
+}
+async function fusionarGrupo(gi) {
+  const g = S.dp.grupos[gi], k = (document.querySelector(`input[name="dp-k-${gi}"]:checked`) || {}).value;
+  if (!k) return toast('Marque el registro que se conserva.', 'err');
+  const quitar = g.registros.filter(x => x.id !== k), kn = g.registros.find(x => x.id === k).nombre;
+  const c = prompt('Se conservará: ' + kn + ' (' + k + ').\nSe pasará TODO lo registrado de: ' + quitar.map(x => x.nombre + ' (' + x.id + ')').join(', ') + ' y luego se retirará(n).\n\nPara confirmar escriba FUSIONAR:');
+  if (c === null) return;
+  for (const x of quitar) await run(async () => { const r = await apiT('apiFusionarPersona', S.dp.tipo, x.id, k, c); toast(r.mensaje, 'ok'); });
+  buscarDupPersonas();
+}
 // ---- v4.17: duplicados ----
 async function revisarDuplicados(corregir, area) {
   if (corregir && !confirm('Se dejará el registro más reciente de cada calificación repetida y los demás se respaldarán en la hoja "Duplicados_Respaldo". ¿Continuar?')) return;
@@ -2496,7 +2659,7 @@ async function boEstudiantes() {
   } catch (e) { $('bo-est').innerHTML = '<option value="">Todos</option>'; }
 }
 async function genBoletas() {
-  const f = { jornada: $('bo-jor').value, grado: $('bo-gra').value, paralelo: $('bo-par').value, trimestre: Number($('bo-trim').value), idEstudiante: $('bo-est').value };
+  const f = { jornada: $('bo-jor').value, grado: $('bo-gra').value, paralelo: $('bo-par').value, trimestre: Number($('bo-trim').value), idEstudiante: $('bo-est').value, modo: $('bo-modo') ? $('bo-modo').value : 'TRIMESTRAL' };
   let ok = false;
   S.boPapel = $('bo-papel') ? $('bo-papel').value : 'A5';
   await run(async () => { mostrarReporte(await apiT('apiReporte', 'boleta2', f)); ok = true; });
@@ -3509,6 +3672,12 @@ function mostrarReporte(r) {
       tabla(['N°', 'Estudiante', 'Curso', 'Asignatura', 'Trim.', 'Tipo', 'Nota inicial', 'Solicitado por', 'Autorizado por', 'Estado', 'Evaluación', 'Nota mejorada'],
         r.filas.map((m, n) => `<tr><td class="c">${n + 1}</td><td>${esc(m.estudiante)}</td><td>${esc(m.grado + ' ' + m.paralelo + ' ' + m.jornada)}</td><td>${esc(m.asignatura)}</td><td class="c">${esc(m.trimestre)}</td><td>${m.tipo === 'DIRECTA' ? 'Directa' : 'Con refuerzo'}</td><td class="c">${f2(m.notaInicial)}</td><td>${esc(m.solicitadoPor + ' (' + m.parentesco + ') ' + m.fechaSolicitud)}</td><td>${esc(m.autorizadoPor + ' ' + m.fechaAutorizacion)}</td><td>${esc(m.estado)}</td><td class="c">${f2(m.notaEvaluacion)}</td><td class="c b">${f2(m.notaMejorada)}</td></tr>`)) +
       firmas([[r.inst.rectora, 'Rectora']]);
+  } else if (r.tipo === 'historial') {
+    orient = 'landscape';
+    h = encabezado(r, 'Historial de calificaciones', 'Cambios y correcciones autorizadas de calificaciones registradas') +
+      tabla(['N°', 'Fecha', 'Tipo', 'Estudiante', 'Curso', 'Asignatura', 'Periodo', 'Casilla', 'Anterior', 'Nuevo', 'Docente / registró', 'Motivo', 'Solicitado por', 'Autorizado por'],
+        r.filas.map((x, n) => `<tr><td class="c">${n + 1}</td><td>${esc(x.Fecha)}</td><td>${x.Tipo === 'CORRECCION' ? 'Corrección' : 'Docente'}</td><td>${esc(x.Estudiante)}</td><td>${esc(x.Curso + ' ' + x.Jornada)}</td><td>${esc(x.Asignatura)}</td><td>${esc(x.Periodo)}</td><td class="c">${esc(x.Campo)}</td><td class="c">${esc(x.Valor_Anterior)}</td><td class="c b">${esc(x.Valor_Nuevo)}</td><td>${esc(x.Responsable)}</td><td>${esc(x.Motivo)}</td><td>${esc(x.Solicitado_Por)}</td><td>${esc(x.Autorizado_Por)}</td></tr>`)) +
+      firmas([[r.emisor, 'Administrador/a del sistema'], [r.inst.rectora, 'Rectora']]);
   } else if (r.tipo === 'docentes') {
     orient = 'landscape';
     const filas = r.filas.map((x, n) => `<tr><td class="c">${n + 1}</td><td>${esc(x.docente)}</td><td>${esc(x.cedula)}</td><td>${esc(x.jornada)}</td><td>${esc(x.tutor)}</td>
@@ -3715,6 +3884,45 @@ function mostrarReporte(r) {
         ${fil('Faltas injustificadas', i => as[i] ? as[i].fi : '')}
         ${fil('Atrasos', i => as[i] ? as[i].at : '')}</tbody></table>`;
       const ley = leyendaUsada(r, b);
+      if (r.modo === 'TRIMESTRAL') {
+        // v4.22: BOLETA TRIMESTRAL – promedio de insumos (70 %) + proyecto interdisciplinar (30 %); comportamiento y asistencia debajo; ocupa toda la hoja A5
+        const W = r.pesos || { pf: 70, ps: 30 }, ti = T - 1, conPS = !r.cualitativa && !W.sinSumativa;
+        const nP = r.pesos && r.pesos.piloto ? 'Proyecto interdisciplinar' : 'Evaluación sumativa';
+        const n2 = v => v === '' || v == null ? '' : (typeof v === 'number' ? f2(v) : esc(v));
+        const nc = conPS ? 8 : 4;
+        const fT = b.filas.map((x, i) => {
+          let area = '';
+          if (i === 0 || b.filas[i - 1].area !== x.area) { let n = 1; while (b.filas[i + n] && b.filas[i + n].area === x.area) n++; area = `<td${n > 1 ? ` rowspan="${n}" style="vertical-align:middle"` : ''}>${esc(x.area)}</td>`; }
+          const d = x.det || {};
+          return `<tr>${area}<td>${esc(x.asignatura)}</td>${conPS ? `<td class="c">${n2(d.promF)}</td><td class="c">${n2(d.pF)}</td><td class="c">${n2(d.sum)}${d.mejora ? '<sup>M</sup>' : ''}</td><td class="c">${n2(d.pS)}</td>` : ''}<td class="c b">${n2(x.t[ti])}</td><td>${esc(x.obs)}</td></tr>`;
+        });
+        fT.push(`<tr><td colspan="${conPS ? 6 : 2}" class="b c">PROMEDIO GENERAL DEL TRIMESTRE</td><td class="c b">${n2(b.promGen[ti])}</td><td></td></tr>`);
+        if (b.optativas.length) {
+          fT.push(`<tr><th colspan="${nc}" style="text-align:left">ASIGNATURAS OPTATIVAS (cualitativas – no se promedian ni son requisito de promoción, Art. 9)</th></tr>`);
+          b.optativas.forEach(x => fT.push(`<tr><td>Optativa</td><td colspan="${conPS ? 5 : 1}">${esc(x.asignatura)}</td><td class="c b">${n2(x.t[ti])}</td><td>${esc(x.obs || '')}</td></tr>`));
+        }
+        if (b.periodos.length) {
+          fT.push(`<tr><th colspan="${nc}" style="text-align:left">PERIODOS PEDAGÓGICOS (cualitativos – no se promedian, Art. 9)</th></tr>`);
+          b.periodos.forEach(x => fT.push(`<tr><td colspan="${conPS ? 6 : 2}">${esc(x.asignatura)}</td><td class="c b">${n2(x.t[ti])}</td><td>${esc(x.obs || '')}</td></tr>`));
+        }
+        const cab = conPS ? ['Área', 'Asignaturas', 'Promedio de insumos', `Formativo ${W.pf} %`, nP, `${nP.split(' ')[0]} ${W.ps} %`, 'Nota trimestral', 'Observaciones'] : ['Área', 'Asignaturas', 'Calificación del trimestre', 'Observaciones'];
+        const a = (b.asistencia || [])[ti] || null;
+        const aiaT = (b.aia || []).filter(h => h.t[ti]);
+        const compTxt = b.comportamiento[ti] ? `<b>${esc(b.comportamiento[ti])}</b> – ${esc((b.compDesc || [])[ti] || '')}` : '';
+        const bajo = `<table class="bolT-bajo"><thead><tr><th style="width:50%;text-align:left">COMPORTAMIENTO – ${T}° TRIMESTRE</th><th colspan="5" style="text-align:left">ASISTENCIA – ${T}° TRIMESTRE</th></tr></thead><tbody>
+          <tr><td rowspan="2" style="vertical-align:top">${compTxt}${aiaT.length ? `<div style="margin-top:2px;font-size:.92em">${aiaT.map(h => `${chip(h.t[ti])} ${esc(h.habilidad)}`).join(' · ')}</div>` : ''}</td>
+            <th>Días laborados</th><th>Días asistidos</th><th>Faltas justificadas</th><th>Faltas injustificadas</th><th>Atrasos</th></tr>
+          <tr>${a ? [a.dias, a.asistidos, a.fj, a.fi, a.at].map(v => `<td class="c b">${esc(v)}</td>`).join('') : '<td colspan="5" class="c">—</td>'}</tr></tbody></table>`;
+        return `<div class="pagina bolT">${encabezado(r, 'Boleta de calificaciones', `${T}° trimestre – Año lectivo ${esc(r.inst.periodo)}`)}
+          ${ficha([['Estudiante', b.nombres], ['Cédula', b.cedula], ['Año / curso', F.grado], ['Paralelo', F.paralelo], ['Jornada', F.jornada], ['Subnivel', r.subnivel], ['Docente tutor/a', r.tutor]])}
+          <div class="bolT-cuerpo">${tabla(cab, fT)}</div>
+          ${conPS ? `<div class="bolT-nota">Nota trimestral = ${W.pf} % del promedio de los insumos formativos + ${W.ps} % del ${nP.toLowerCase()}${fT.some(x => x.includes('<sup>M</sup>')) ? ' · <sup>M</sup> con mejora (Art. 12-13)' : ''}.</div>` : ''}
+          ${bajo}
+          <table style="margin-top:4px"><tr><th style="text-align:left">OBSERVACIONES DEL DOCENTE TUTOR/A</th></tr>
+            <tr><td style="height:8mm;vertical-align:top">${esc(b.compObs || '')}</td></tr></table>
+          ${ley.length ? `<table class="leyenda"><thead><tr>${ley.map(c => `<th style="width:${Math.floor(100 / ley.length)}%">${c[0]}</th>`).join('')}</tr></thead><tbody><tr>${ley.map(c => `<td>${c[1]}</td>`).join('')}</tr></tbody></table>` : ''}
+          ${firmas([[r.inst.rectora, 'Rectora'], [r.tutor, 'Docente tutor/a'], ['', 'Padre, madre o representante']])}${norma(r)}</div>`;
+      }
       return `<div class="pagina">${encabezado(r, 'Boleta de calificaciones', `${T}° trimestre – Año lectivo ${esc(r.inst.periodo)}`)}
         ${ficha([['Estudiante', b.nombres], ['Cédula', b.cedula], ['Año / curso', F.grado], ['Paralelo', F.paralelo], ['Jornada', F.jornada], ['Subnivel', r.subnivel], ['Docente tutor/a', r.tutor]])}
         <div class="bol2c"><div class="izq">${tabla(['Área', 'Asignaturas'].concat(['1° T', '2° T', '3° T'], ['Prom. anual', 'Observaciones']), filas)}</div>
