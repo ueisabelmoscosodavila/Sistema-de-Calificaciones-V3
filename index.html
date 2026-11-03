@@ -552,7 +552,7 @@
           <p class="text-[11px] text-slate-600">Vuelve a calcular la alerta de todo lo ya registrado con el criterio vigente (Media a Bachillerato: promedio del corte; Elemental: por insumo; Preparatoria: por destreza). <b>No modifica ninguna calificación.</b> Úselo después de cambiar el criterio de alerta.</p>
           <button onclick="recalcularAlertas()" class="btn btn-warn">🔁 Recalcular alertas</button>
         </div>
-<div class="border-t pt-2 space-y-1">
+<div class="border-t pt-2 space-y-1 solo-admin hidden">
           <div class="flex justify-between items-center"><div class="font-black text-xs">💾 Estado de respaldos</div><button onclick="cargarRespaldos('rs-inst')" class="btn btn-sec py-1">🔄</button></div>
           <div id="rs-inst" class="text-[11px]"></div>
         </div>
@@ -564,6 +564,12 @@
         </div>
       </div>
       <div class="space-y-4">
+        <div class="card space-y-2 solo-admin hidden">
+          <div class="flex justify-between items-center"><h3 class="font-black text-sm">✍️ Firmas de informes generales (todas las jornadas)</h3>
+            <button onclick="guardarFirmasGenerales()" class="btn btn-primary">💾 Guardar</button></div>
+          <p class="text-[11px] text-slate-500">Se usan en los informes que abarcan <b>todas las jornadas</b> (planta docente, distributivo, consulta de docentes, seguimiento, registro de mejoras…). Los informes de una jornada o de un curso firman automáticamente el Vicerrectorado de esa jornada, el tutor del curso, el docente y la Rectora. Deje vacía la fila que no use.</p>
+          <div id="fg-body" class="space-y-1 text-xs"></div>
+        </div>
         <div class="card space-y-2">
           <h3 class="font-black text-sm">👥 Autoridades (firmas de los informes)</h3>
           <div id="dir-body" class="space-y-2 text-xs"></div>
@@ -634,6 +640,16 @@
     <p class="text-slate-600">Usted tiene funciones de autoridad y también dicta clases. Puede cambiar de rol cuando quiera con el botón <b>🔄 Cambiar rol</b> de la parte superior.</p>
     <div id="rol-ops" class="space-y-2"></div>
     <button id="rol-cancel" onclick="cerrarModal('m-rol')" class="btn btn-sec w-full">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL AVISO DE INACTIVIDAD (v4.20) -->
+<div id="m-inact" class="hidden fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50">
+  <div class="bg-white max-w-sm w-full p-5 rounded-3xl space-y-3 text-xs text-center">
+    <h3 class="font-black text-sm">⏳ ¿Sigue ahí?</h3>
+    <p>Por seguridad, su sesión se cerrará por inactividad en <b id="in-seg" class="text-lg text-red-700">2:00</b></p>
+    <p class="text-slate-500">Si tiene calificaciones sin guardar, no se perderán: se le pedirá su contraseña.</p>
+    <button onclick="seguirTrabajando()" class="btn btn-primary w-full">Seguir trabajando</button>
   </div>
 </div>
 
@@ -1056,7 +1072,23 @@ const esElementalSinSum = g => { const o = ordenG(g); return o >= 2 && o <= 4 &&
 // ============================================================================
 api('apiInfoPublica').then(i => {
   $('h-sub').textContent = `AMIE ${i.amie} · ${i.ciudad}` + (i.periodo ? ` · Año lectivo ${i.periodo}` : '') + (i.acuerdo ? ` · Acuerdo ${i.acuerdo}` : '');
+  revisarVersion(i.version);
 }).catch(() => {});
+// ---- v4.20: la página se actualiza sola cuando hay una versión nueva del sistema ----
+const VERSION_CLIENTE = '4.20';
+function revisarVersion(v) {
+  if (!v || v === VERSION_CLIENTE || EN_APPS_SCRIPT) return;
+  if (S.sucio) return; // nunca se recarga con notas sin guardar
+  let ya = ''; try { ya = sessionStorage.getItem('recargaVersion') || ''; } catch (e) { ya = ''; }
+  if (ya !== v) {
+    try { sessionStorage.setItem('recargaVersion', v); } catch (e) { /* sin almacenamiento */ }
+    toast('Hay una versión nueva del sistema (' + v + '). Actualizando…', 'ok');
+    setTimeout(() => location.replace(location.pathname + '?v=' + encodeURIComponent(v) + location.hash), 900);
+  } else if (!$('aviso-version')) {
+    // ya se intentó recargar y GitHub aún no publica la página nueva: se avisa sin insistir
+    document.body.insertAdjacentHTML('afterbegin', '<div id="aviso-version" class="text-center text-[11px] font-bold bg-amber-100 text-amber-900 py-1">Hay una versión nueva del sistema en publicación. Si algo no aparece, recargue la página en unos minutos.</div>');
+  }
+}
 $('lg-p').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
 
 async function login() {
@@ -1074,6 +1106,36 @@ async function login() {
   });
 }
 
+// ---- v4.20: cierre por inactividad (Minutos_Inactividad, 15 por defecto) ----
+S.ultAct = Date.now(); S.ultPing = Date.now();
+const minInact = () => Math.max(5, Number((S.cat && S.cat.params && S.cat.params.inactMin) || 15));
+function marcarActividad() {
+  if (!S.token) return;
+  S.ultAct = Date.now();
+  if (!$('m-inact').classList.contains('hidden')) cerrarModal('m-inact');
+  // señal al servidor como máximo cada 4 minutos mientras se trabaja (si no, el servidor cerraría la sesión)
+  if (Date.now() - S.ultPing > 4 * 60000) { S.ultPing = Date.now(); api('apiPing', S.token).then(r => { if (r && r.version) revisarVersion(r.version); }).catch(() => {}); }
+}
+['mousedown', 'keydown', 'scroll', 'touchstart', 'input', 'wheel'].forEach(ev => document.addEventListener(ev, marcarActividad, { passive: true, capture: true }));
+let _ultMov = 0; document.addEventListener('mousemove', () => { const t = Date.now(); if (t - _ultMov > 15000) { _ultMov = t; marcarActividad(); } }, { passive: true });
+setInterval(() => {
+  if (!S.token || $('v-app').classList.contains('hidden') || !$('m-relog').classList.contains('hidden')) return;
+  const ina = Date.now() - S.ultAct, lim = minInact() * 60000;
+  if (ina >= lim) {
+    cerrarModal('m-inact');
+    if (S.sucio) {
+      // hay notas sin guardar: se bloquea la pantalla SIN borrar lo escrito
+      api('apiCerrarSesion', S.token).catch(() => {});
+      $('rl-u').value = S.ses.usuario; $('rl-p').value = ''; $('rl-err').textContent = 'Su sesión caducó por inactividad. Lo escrito sigue en pantalla.'; $('rl-err').classList.remove('hidden');
+      abrirModal('m-relog');
+    } else { salir(true); alert('Su sesión caducó por ' + minInact() + ' minutos de inactividad. Ingrese nuevamente.'); }
+  } else if (ina >= lim - 2 * 60000) {
+    const seg = Math.max(0, Math.ceil((lim - ina) / 1000));
+    $('in-seg').textContent = Math.floor(seg / 60) + ':' + String(seg % 60).padStart(2, '0');
+    if ($('m-inact').classList.contains('hidden')) abrirModal('m-inact');
+  }
+}, 1000);
+function seguirTrabajando() { S.ultPing = 0; marcarActividad(); cerrarModal('m-inact'); }
 async function reingresar() {
   const p = $('rl-p').value, er = $('rl-err'); if (!p) return;
   try {
@@ -1081,7 +1143,7 @@ async function reingresar() {
     if (!r.success) { er.textContent = r.mensaje; er.classList.remove('hidden'); return; }
     let tk = r.token;
     if (r.sesion.rol !== S.ses.rol) { const x = await api('apiCambiarRol', tk, S.ses.rol); tk = x.token; }
-    S.token = tk; cerrarModal('m-relog'); toast('Sesión renovada. Pulse Guardar nuevamente.', 'ok');
+    S.token = tk; S.ultAct = Date.now(); S.ultPing = Date.now(); cerrarModal('m-relog'); toast('Sesión renovada. ' + (S.sucio ? 'Pulse Guardar para guardar lo escrito.' : ''), 'ok');
   } catch (e) { er.textContent = e.message; er.classList.remove('hidden'); }
 }
 // ---- v4.16: doble rol (autoridad que también es docente) ----
@@ -1115,6 +1177,8 @@ function salir(silencioso) {
 }
 
 function iniciarApp() {
+  S.ultAct = Date.now(); S.ultPing = Date.now();
+  if (S.cat && S.cat.version) revisarVersion(S.cat.version);
   $('v-login').classList.add('hidden'); $('v-app').classList.remove('hidden');
   $('badge').classList.remove('hidden'); $('badge').classList.add('flex');
   $('b-nombre').textContent = S.ses.nombre;
@@ -1122,7 +1186,7 @@ function iniciarApp() {
   $('b-cambiarol').classList.toggle('hidden', !(S.roles && S.roles.length > 1));
   const R = S.ses.rol;
   let tabs = R === 'DOCENTE' ? [['planilla', '📝 Mis calificaciones']]
-    : R === 'ADMINISTRADOR' ? [['permisos', '🛡️ Permisos y herramientas']]
+    : R === 'ADMINISTRADOR' ? [['permisos', '🛡️ Permisos y herramientas'], ['institucion', '🏫 Institución']]
     : R === 'RECTORA' ? [['estudiantes', '🎒 Estudiantes'], ['docentes', '👨‍🏫 Docentes'], ['optativas', '🎓 Optativas BGU'], ['periodos', '📅 Fechas, cortes y bloqueos'], ['informes', '📊 Informes'], ['seguimiento', '⚠️ Seguimiento y cumplimiento'], ['inasistencias', '🚨 Inasistencias'], ['efb', '🎓 Evaluación final de Bachillerato'], ['malla', '📋 Distributivo'], ['consulta', '📖 Consulta de calificaciones'], ['proyectos', '🧩 Proyectos interdisciplinarios'], ['mejoras', '📝 Mejoras'], ['cierretrim', '🔒 Cierre de trimestre'], ['institucion', '🏫 Institución'], ['cierre', '🎓 Cierre del año']]
     : esInspeccion() ? [['inasistencias', '🚨 Inasistencias y justificaciones']]
     : [['estudiantes', '🎒 Estudiantes'], ['optativas', '🎓 Optativas BGU'], ['informes', '📊 Informes'], ['seguimiento', '⚠️ Seguimiento y cumplimiento'], ['efb', '🎓 Evaluación final de Bachillerato'], ['malla', '📋 Distributivo'], ['consulta', '📖 Consulta de calificaciones'], ['proyectos', '🧩 Proyectos interdisciplinarios'], ['mejoras', '📝 Mejoras'], ['cierretrim', '🔒 Cierre de trimestre']];
@@ -1131,7 +1195,8 @@ function iniciarApp() {
   tabs = tabs.filter(t => !bloq.includes(TAB_FUN[t[0]]));
   if (!tabs.length) { alert('El Administrador del sistema bloqueó todas las funciones de su perfil.'); salir(); return; }
   $('nav').innerHTML = tabs.map(t => `<button data-tab="${t[0]}" onclick="irTab('${t[0]}')" class="tabbtn px-4 py-2 rounded-xl font-semibold text-slate-600 hover:bg-slate-100 whitespace-nowrap">${t[1]}</button>`).join('');
-  document.querySelectorAll('.solo-rectora').forEach(e => e.classList.toggle('hidden', R !== 'RECTORA'));
+  document.querySelectorAll('.solo-rectora').forEach(e => e.classList.toggle('hidden', R !== 'RECTORA' && !(R === 'ADMINISTRADOR' && e.closest('#tab-institucion'))));
+  document.querySelectorAll('.solo-admin').forEach(e => e.classList.toggle('hidden', R !== 'ADMINISTRADOR'));
   if (R !== 'DOCENTE' && R !== 'ADMINISTRADOR') { prepararFiltrosDirectivos(); prepararInasistencias(); }
   irTab(tabs[0][0]);
 }
@@ -1148,6 +1213,7 @@ function aplicarLectura() {
     const id = t.id.replace('tab-', '');
     if (!enLectura(id) || t.classList.contains('hidden')) return;
     t.querySelectorAll('button').forEach(b => { if (RX_ACCION.test(b.getAttribute('onclick') || '')) b.classList.add('hidden'); });
+    if (id === 'institucion') t.querySelectorAll('input, select, textarea').forEach(x => x.disabled = true); // v4.19: Institución en "Solo ver"
     if (!t.querySelector('.aviso-lectura')) t.insertAdjacentHTML('afterbegin', '<div class="aviso-lectura p-2 mb-2 rounded-xl bg-slate-100 border text-xs font-bold text-slate-700">👁️ Solo lectura (asignado por el Administrador del sistema): puede consultar, pero no guardar cambios.</div>');
   });
   if (S.ses && S.ses.rol === 'DOCENTE' && (S.cat.lectura || []).includes(SUB_FUN[S.sub]) && $('pl-acciones')) $('pl-acciones').querySelectorAll('button').forEach(b => { if (RX_ACCION.test(b.getAttribute('onclick') || '')) b.classList.add('hidden'); });
@@ -1156,7 +1222,7 @@ new MutationObserver(() => { clearTimeout(S._lt); S._lt = setTimeout(aplicarLect
 const ON_TAB = {
   permisos: () => { cargarPermisos(); cargarRespaldos('rs-adm'); }, cierretrim: () => iniCierreTrim(), consulta: () => iniConsulta2(), proyectos: () => iniProyectos(), mejoras: () => iniMejoras(),
   estudiantes: () => cargarEstudiantes(), docentes: () => cargarDocentes(), periodos: () => { renderPeriodos(); cargarDesbloqueos(); },
-  optativas: () => cargarOptativas(), inasistencias: () => cargarInasistencias(), cierre: () => cargarCierre(), efb: () => iniEFB(), malla: () => iniMalla(), informes: () => { cargarAnios(); infCurso(); }, seguimiento: () => cumCortes(), institucion: () => { cargarInstitucion(); cargarRespaldos('rs-inst'); }, planilla: () => initPlanilla()
+  optativas: () => cargarOptativas(), inasistencias: () => cargarInasistencias(), cierre: () => cargarCierre(), efb: () => iniEFB(), malla: () => iniMalla(), informes: () => { cargarAnios(); infCurso(); }, seguimiento: () => cumCortes(), institucion: () => { cargarInstitucion(); if (S.ses.rol === 'ADMINISTRADOR') cargarRespaldos('rs-inst'); }, planilla: () => initPlanilla()
 };
 function irTab(t) {
   if (t !== 'informes' && S.anioArch) { S.anioArch = ''; if ($('inf-anio')) $('inf-anio').value = ''; avisoAnio(); }
@@ -1563,7 +1629,11 @@ async function cargarInstitucion() {
   await run(async () => {
     const r = await apiT('apiObtenerConfig');
     pintarHabilidades();
-    $('cfg-body').innerHTML = r.config.filter(c => c.parametro !== 'Habilidades_AIA').map(c => `<div><label class="lbl">${esc(c.parametro.replace(/_/g, ' '))} <span class="font-normal text-slate-500">· ${esc(c.descripcion)}</span></label>
+    const FG = r.config.filter(c => /^Firma_General_\d$/.test(c.parametro));
+    if ($('fg-body')) $('fg-body').innerHTML = [1, 2, 3].map(i => { const v = String((FG.find(c => c.parametro === 'Firma_General_' + i) || {}).valor || '').split('|').map(x => x.trim());
+      return `<div class="grid grid-cols-1 sm:grid-cols-3 gap-1"><input id="fg-n-${i}" class="inp" placeholder="Nombre con título (firma ${i})" value="${esc(v[0] || '')}"><input id="fg-c-${i}" class="inp" placeholder="Cargo" value="${esc(v[1] || '')}">
+        <select id="fg-r-${i}" class="inp">${opts(['', 'ELABORADO', 'REVISADO', 'APROBADO'], (v[2] || '').toUpperCase(), 'Sin rótulo')}</select></div>`; }).join('');
+    $('cfg-body').innerHTML = r.config.filter(c => c.parametro !== 'Habilidades_AIA' && !/^Firma_General_\d$/.test(c.parametro)).map(c => `<div><label class="lbl">${esc(c.parametro.replace(/_/g, ' '))} <span class="font-normal text-slate-500">· ${esc(c.descripcion)}</span></label>
       <input class="inp cfg" data-p="${esc(c.parametro)}" value="${esc(c.valor)}"></div>`).join('');
     $('dir-body').innerHTML = r.directivos.map(d => `<div class="border rounded-xl p-2 space-y-1">
       <div class="font-bold">${esc(d.cargo)} <span class="font-mono text-sky-800">(${esc(d.usuario)})</span></div>
@@ -1915,6 +1985,10 @@ async function guardarDatosAdmin() { await run(async () => { const r = await api
 async function recalcularAlertas() {
   if (!confirm('Se recalcularán las alertas de TODAS las planillas guardadas con el criterio vigente.\nNo se modifica ninguna calificación.\n\n¿Continuar?')) return;
   await run(async () => { const r = await apiT('apiRecalcularAlertas'); toast(r.mensaje, 'ok'); });
+}
+async function guardarFirmasGenerales() {
+  const pares = [1, 2, 3].map(i => ({ parametro: 'Firma_General_' + i, valor: $('fg-n-' + i).value.trim() ? [$('fg-n-' + i).value.trim(), $('fg-c-' + i).value.trim(), $('fg-r-' + i).value].join(' | ') : '' }));
+  await run(async () => { const r = await apiT('apiGuardarConfig', pares); toast('Firmas de informes generales guardadas.', 'ok'); });
 }
 async function guardarConfig() {
   const pares = [...document.querySelectorAll('.cfg')].map(i => ({ parametro: i.dataset.p, valor: i.value }));
@@ -3359,7 +3433,16 @@ function encabezado(r, titulo, sub) {
     <div class="tit">${titulo}</div>${sub ? `<div>${sub}</div>` : ''}</div>`;
 }
 function ficha(pares) { return `<div class="ficha">${pares.filter(p => p).map(p => `<div><b>${esc(p[0])}:</b> ${esc(p[1])}</div>`).join('')}</div>`; }
+// v4.19: en los informes GENERALES (todas las jornadas) firman las personas que definió el Administrador
+let _repFirmas = null;
 function firmas(lista) {
+  const r = _repFirmas, F = r && r.filtros ? r.filtros : {};
+  const general = r && (!F.jornada || F.jornada === 'Ambas' || F.jornada === 'Todas');
+  if (general && r.inst && (r.inst.firmasGenerales || []).length) lista = r.inst.firmasGenerales;
+  else if (general) lista = lista.filter(f => f[0] || !/vicerrector/i.test(f[1] || '')); // sin una jornada no hay un solo vicerrector/a
+  return firmasBase(lista);
+}
+function firmasBase(lista) {
   return `<div class="firmas">${lista.map(f => `<div class="firma"><b>${esc(f[0]) || '&nbsp;'}</b><small>${esc(f[1])}</small>${f[2] ? `<small><b>${esc(f[2])}</b></small>` : ''}</div>`).join('')}</div>`;
 }
 function norma(r) {
@@ -3372,6 +3455,7 @@ const vice = r => [r.vicerrector, 'Vicerrector/a – Jornada ' + r.filtros.jorna
 // v4.18: con el Programa Piloto CNC la sumativa es el proyecto interdisciplinario
 const labSum = (P, corto) => P && P.piloto ? (corto ? 'Proyecto' : 'Proyecto interdisciplinario') : (corto ? 'Sumativo' : 'Sumativa');
 function mostrarReporte(r) {
+  _repFirmas = r;
   const F = r.filtros, curso = `${F.grado || ''} - Paralelo ${F.paralelo || ''}`;
   let h = '', orient = 'portrait';
   if (r.tipo === 'alertas' || r.tipo === 'mensual') {
@@ -3396,7 +3480,7 @@ function mostrarReporte(r) {
         tabla(['N°', 'Estudiante', 'Asignatura', 'Insumos', 'N° insumos bajos', 'Promedio del corte', 'Equivalencia cualitativa'], r.observacion.map((x, n) => `<tr><td class="c">${n + 1}</td><td>${esc(x.nombres)}</td><td>${esc(x.asignatura)}</td>
           <td style="font-size:.9em">${x.insumos.filter(it => it.f !== '').map(it => (Number(it.f) < r.params.notaMin ? '<b style="color:#b91c1c">' + f2(it.f) + '</b>' : f2(it.f)) + (it.r !== '' ? ' (R ' + f2(it.r) + ')' : '')).join(' · ')}</td><td class="c b">${x.bajos}</td><td class="c b">${f2(x.prom)}</td><td>${esc(x.equiv)}</td></tr>`));
     }
-    h += firmas([[r.docente, 'Docente de asignatura', 'REALIZADO'], vice(r)]) + norma(r);
+    h += firmas([[r.docente, F.asignatura ? 'Docente de asignatura' : 'Docente tutor/a', 'REALIZADO'], vice(r)]) + norma(r);
   } else if (r.tipo === 'trimestral') {
     orient = 'landscape';
     // v4.10: detalle por corte (promedio inicial · ⚠ alerta · R refuerzo pedagógico aplicado)
@@ -3432,7 +3516,7 @@ function mostrarReporte(r) {
     const filtro = [F.jornada === 'Ambas' ? 'Todas las jornadas' : 'Jornada ' + F.jornada, F.grado || '', F.paralelo ? 'Paralelo ' + F.paralelo : '', F.comision === '__TODAS__' ? 'Docentes con comisión' : (F.comision ? 'Comisión: ' + F.comision : '')].filter(Boolean).join(' · ');
     h = encabezado(r, 'Consulta de docentes', esc(filtro)) + ficha([['Filtro', filtro], ['Docentes', r.filas.length]]) +
       tabla(['N°', 'Docente', 'Cédula', 'Jornada', 'Tutoría', 'Clases (curso · asignatura)', 'Comisiones', 'Carga horaria'], filas) +
-      firmas([[r.vicerrector || '', 'Vicerrector/a', 'ELABORADO'], [r.inst.rectora, 'Rectora', 'APROBADO']]) + norma(r);
+      firmas([[r.vicerrector || '', 'Vicerrector/a – Jornada ' + F.jornada, 'ELABORADO'], [r.inst.rectora, 'Rectora', 'APROBADO']]) + norma(r);
   } else if (r.tipo === 'planta') {
     orient = 'landscape';
     const filas = r.filas.map((x, n) => `<tr class="${x.total > 40 ? 'alerta' : ''}"><td class="c">${n + 1}</td><td>${esc(x.docente)}</td><td>${esc(x.cedula)}</td><td>${esc(x.tutor)}</td>
@@ -3441,14 +3525,14 @@ function mostrarReporte(r) {
     h = encabezado(r, 'Planta docente – Jornada ' + esc(F.jornada), 'Asignaturas, actividades y carga horaria semanal (periodos pedagógicos)') +
       ficha([['Jornada', F.jornada], ['Docentes', r.filas.length], ['Total de horas asignadas', tot]]) +
       tabla(['N°', 'Docente', 'Cédula', 'Tutoría', 'Asignaturas (curso · asignatura · horas)', 'Otras actividades', 'Carga horaria'], filas) +
-      firmas([[r.vicerrector || '', 'Vicerrector/a', 'ELABORADO'], [r.inst.rectora, 'Rectora', 'APROBADO']]) + norma(r);
+      firmas([[r.vicerrector || '', 'Vicerrector/a – Jornada ' + F.jornada, 'ELABORADO'], [r.inst.rectora, 'Rectora', 'APROBADO']]) + norma(r);
   } else if (r.tipo === 'distributivo') {
     orient = 'landscape';
     const filas = r.filas.map((x, n) => `<tr class="${x.total > 40 ? 'alerta' : ''}"><td class="c">${n + 1}</td><td>${esc(x.docente)}</td><td>${esc(x.cedula)}</td><td>${esc(x.jornada)}</td><td>${esc(x.tutor)}</td>
       <td style="font-size:.9em">${x.clases.map(esc).join('<br>') || '—'}</td><td style="font-size:.9em">${x.actividades.map(esc).join('<br>') || '—'}</td><td class="c b">${x.total}</td></tr>`);
     h = encabezado(r, 'Distributivo docente', 'Jornada ' + F.jornada + ' · Horas = periodos pedagógicos semanales') +
       tabla(['N°', 'Docente', 'Cédula', 'Jornada', 'Tutoría', 'Clases (curso · asignatura)', 'Otras actividades', 'Total horas'], filas) +
-      firmas([[r.vicerrector || '', 'Vicerrector/a', 'ELABORADO'], [r.inst.rectora, 'Rectora', 'APROBADO']]) + norma(r);
+      firmas([[r.vicerrector || '', 'Vicerrector/a – Jornada ' + F.jornada, 'ELABORADO'], [r.inst.rectora, 'Rectora', 'APROBADO']]) + norma(r);
   } else if (r.tipo === 'ambitos') {
     // v4.11: Inicial y Preparatoria por ámbitos (bandas del Art. 7)
     orient = 'landscape';
@@ -3656,7 +3740,7 @@ function mostrarReporte(r) {
     h = encabezado(r, 'Cuadro de nota de grado – 3° de Bachillerato', 'Art. 151 RGLOEI: 20% Básica Media + 30% Básica Superior + 30% Bachillerato + 10% PPE + 10% Evaluación Final de Bachillerato (dos decimales truncados)') +
       ficha([['Jornada', F.jornada], ['Curso', curso], ['Docente tutor/a', r.tutor], ['Subnivel', 'Bachillerato en Ciencias']]) +
       tabla(['N°', 'Cédula', 'Estudiante', 'Básica Media (20%)', 'Básica Superior (30%)', 'Bachillerato (30%)', 'PPE (10%)', 'Modalidad EFB', 'EFB (10%)', 'Nota de grado', 'Estado'], filas) +
-      firmas([[r.tutor, 'Docente tutor/a'], [r.vicerrector || '', 'Vicerrector/a'], [r.inst.rectora, 'Rectora']]) + norma(r);
+      firmas([[r.tutor, 'Docente tutor/a'], [r.vicerrector || '', 'Vicerrector/a – Jornada ' + F.jornada], [r.inst.rectora, 'Rectora']]) + norma(r);
   } else if (r.tipo === 'inasistencias') {
     orient = 'landscape';
     const filas = r.filas.map((x, n) => `<tr><td class="c">${n + 1}</td><td>${esc(x.curso)}</td><td>${esc(x.nombres)}</td><td class="c">${esc(fechasEp(x))}</td><td class="c b">${x.dias}${x.parcial ? ' (algunas horas)' : ''}</td><td>${x.asignaturas.map(esc).join(', ')}</td><td class="c">${x.pendientes ? 'PENDIENTE' : 'JUSTIFICADA'}</td><td class="c b">${esc(x.justificaNombre)}</td></tr>`);
