@@ -484,11 +484,13 @@
           <div><label class="lbl">Trimestre</label><select id="pj-trim" class="inp" onchange="cargarProyectos()"></select></div>
         </div>
         <div id="pj-form" class="grid grid-cols-2 sm:grid-cols-6 gap-2 items-end bg-teal-50 border border-teal-100 rounded-2xl p-3 text-xs">
-          <div><label class="lbl">Año de básica / curso</label><select id="pj-gra" class="inp" onchange="pjAsignaturas()"></select></div>
+          <div><label class="lbl">Año de básica / curso</label><select id="pj-gra" class="inp" onchange="pjAsignaturas(); pjNumero()"></select></div>
           <div><label class="lbl">Paralelos</label><div id="pj-par" class="flex gap-2 pt-2"></div></div>
-          <div><label class="lbl">Proyecto</label><select id="pj-num" class="inp"><option value="1">Proyecto 1</option><option value="2">Proyecto 2 (excepcional)</option></select></div>
+          <div><label class="lbl">Proyecto</label><select id="pj-num" class="inp"><option value="1">Proyecto 1</option><option value="2">Proyecto 2 (solo Bachillerato)</option></select></div>
           <div class="col-span-2 sm:col-span-3"><label class="lbl">Nombre del proyecto</label><input id="pj-nom" class="inp" placeholder="Ej.: Cuidemos el agua de nuestra comunidad"></div>
-          <div class="col-span-2 sm:col-span-6"><label class="lbl">Asignaturas participantes</label><div id="pj-asig" class="flex flex-wrap gap-x-3 gap-y-1"></div></div>
+          <div class="col-span-2 sm:col-span-6"><label class="lbl">Asignaturas participantes (solo las del año de básica / curso)</label><div id="pj-asig" class="flex flex-wrap gap-x-3 gap-y-1" onchange="pjResp()"></div></div>
+          <div class="col-span-2 sm:col-span-3"><label class="lbl">Ingresa la nota conjunta (50 %)</label><select id="pj-resp" class="inp"><option value="TUTOR">Tutor/a del curso</option></select></div>
+          <div class="col-span-2 sm:col-span-2 text-[10px] text-slate-600">Nota del proyecto de cada asignatura = (nota disciplinar 50 % + nota conjunta 50 %) → sumativa del trimestre. Los demás docentes ven la nota conjunta, pero no la modifican.</div>
           <button onclick="guardarProyectoDef()" class="btn btn-ok">💾 Guardar proyecto</button>
         </div>
       </div>
@@ -1127,7 +1129,7 @@ api('apiInfoPublica').then(i => {
   revisarVersion(i.version);
 }).catch(() => {});
 // ---- v4.20: la página se actualiza sola cuando hay una versión nueva del sistema ----
-const VERSION_CLIENTE = '4.22';
+const VERSION_CLIENTE = '4.24';
 function revisarVersion(v) {
   if (!v || v === VERSION_CLIENTE || EN_APPS_SCRIPT) return;
   if (S.sucio) return; // nunca se recarga con notas sin guardar
@@ -1745,40 +1747,51 @@ function renderProyecto(d) {
   if (d.sinProyecto) { $('pl-area').innerHTML = `<div class="p-5 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 text-sm font-bold text-center">🧩 ${esc(d.mensaje)}</div>`; $('pl-acciones').innerHTML = ''; return; }
   banner(d);
   if (!d.estudiantes.length) return sinEstudiantes();
-  const ed = d.permiso.editable, dis = ed ? '' : 'disabled', E = d.elem;
-  const inp = (id, v) => E ? `<select id="${id}" class="inp text-[11px] px-1 w-16" ${dis}>${opts(LETRAS.slice().reverse(), v || '', '—')}</select>` : `<input class="nota" id="${id}" value="${esc(v)}" ${dis}>`;
+  // v4.23: vista horizontal – una columna por cada asignatura del proyecto que dicta el docente + la nota conjunta
+  const ed = d.permiso.editable, E = d.elem, A = d.misAsig || [], uno = A.length === 1 && !E;
+  let bloqueadas = 0;
+  const inp = (id, v, off) => { const dis = !ed || off ? 'disabled' : ''; if (off && ed) bloqueadas++; const cl = off ? ' bloq-ajena' : '';
+    return E ? `<select id="${id}" class="inp text-[11px] px-1 w-16${cl}" ${dis}>${opts(LETRAS.slice().reverse(), v || '', '—')}</select>` : `<input class="nota${cl}" id="${id}" value="${esc(v)}" ${dis} inputmode="decimal">`; };
   const mej = m => !m ? '<span class="text-slate-300">—</span>' : `<span class="text-[10px] font-bold ${m.estado === 'REGISTRADA' ? 'text-emerald-700' : 'text-amber-800'}">${m.tipo === 'DIRECTA' ? 'Directa' : 'Con refuerzo'}: ${m.estado === 'REGISTRADA' ? esc(f2(m.nota)) + ' → ' + esc(f2(m.mejorada)) : 'por registrar'}</span>`;
   const rows = d.estudiantes.map((e, i) => `<tr><td>${i + 1}</td><td class="font-semibold" style="text-align:left">${esc(e.nombres)}</td>
-    <td class="bg-sky-50">${inp('pd-' + i, e.disc)}</td><td class="bg-violet-50">${inp('pv-' + i, e.val)}</td>
-    <td id="pp-${i}" class="font-bold"></td><td id="pn-${i}" class="font-black"></td>${E ? '' : `<td>${mej(e.mejora)}</td><td>${f2(e.sumEf)}</td><td>${f2(e.promF)}</td><td class="font-black">${f2(e.nota)}</td>`}</tr>`).join('');
+    ${A.map((a, k) => `<td class="bg-sky-50">${inp('pd-' + i + '-' + k, e.disc[a], e.bloq[a])}<div id="pn-${i}-${k}" class="text-[10px] font-black"></div></td>`).join('')}
+    <td class="bg-violet-50">${inp('pc-' + i, e.conj, e.conjBloq && d.esResp)}${!d.esResp ? '' : ''}${e.conjAnterior ? `<div class="text-[9px] text-slate-500">${esc(e.conjAnterior)}</div>` : ''}</td>
+    ${uno ? `<td>${mej(e.det[A[0]].mejora)}</td><td>${f2(e.det[A[0]].sumEf)}</td><td>${f2(e.det[A[0]].promF)}</td><td class="font-black">${f2(e.det[A[0]].nota)}</td>` : ''}</tr>`).join('');
+  const sel = (d.proyectos || []).length > 1 ? `<select class="inp w-auto text-xs" onchange="S.pl.numProy=this.value; plCargar()">${d.proyectos.map(p => `<option value="${p.numero}" ${p.numero === d.proyecto.numero ? 'selected' : ''}>Proyecto ${p.numero}: ${esc(p.nombre)}</option>`).join('')}</select>` : '';
   $('pl-area').innerHTML = `<div class="text-[11px] mb-2 bg-teal-50 border border-teal-200 rounded-xl p-2 space-y-0.5">
-      <div class="font-black text-xs">🧩 Proyecto ${d.proyecto.numero}: ${esc(d.proyecto.nombre)}</div>
+      <div class="font-black text-xs flex flex-wrap items-center gap-2">🧩 Proyecto ${d.proyecto.numero}: ${esc(d.proyecto.nombre)} ${sel}</div>
       <div><b>Asignaturas:</b> ${esc(d.proyecto.asignaturas.join(', '))} · <b>Docentes del equipo (${d.totalDocentes}):</b> ${esc(d.participantes.join('; '))}</div>
-      <div>${E ? '<b>Elemental:</b> evaluación cualitativa (A+ … E-); no cambia la nota del trimestre.' : `<b>Nota del proyecto</b> = (nota disciplinar + promedio interdisciplinar del equipo) / 2 → es la sumativa (${d.params.ps} %) del trimestre. La mejora la autoriza Rectorado o Vicerrectorado.`}</div>
-      <div><b class="text-sky-800">Azul</b>: su nota disciplinar (solo de su asignatura) · <b class="text-violet-800">Violeta</b>: su valoración del producto final (una por estudiante; se promedia con la de los demás docentes).</div></div>
-    <div class="overflow-x-auto border rounded-2xl"><table class="w-full planilla"><thead class="bg-slate-100"><tr><th>N°</th><th class="text-left">Estudiante</th><th>Nota disciplinar<br><small>(su asignatura)</small></th><th>Su valoración interdisciplinar<br><small>(no promediada)</small></th><th>Promedio interdisciplinar<br><small>del equipo</small></th><th>Nota del proyecto</th>${E ? '' : '<th>Mejora</th><th>Sumativa efectiva</th><th>Prom. formativo</th><th>Nota del trimestre</th>'}</tr></thead><tbody>${rows}</tbody></table></div>`;
-  $('pl-area').oninput = $('pl-area').onchange = ev => { const m = String(ev.target.id).match(/^p[dv]-(\d+)$/); if (m) recalcProy(Number(m[1])); };
+      <div><b>Nota del proyecto</b> de cada asignatura = (<b class="text-sky-800">nota disciplinar</b> 50 % + <b class="text-violet-800">nota conjunta</b> 50 %)${E ? ' – Elemental: escala A+ … E-, no cambia la nota del trimestre.' : ` → es la sumativa (${d.params.ps} %) del trimestre. La mejora la autoriza Rectorado o Vicerrectorado.`}</div>
+      <div><b>Nota conjunta:</b> la ingresa ${esc(d.resp)}. ${d.esResp ? '<b class="text-emerald-700">Usted la ingresa.</b>' : 'Usted la puede ver, pero no modificarla.'}</div></div>
+    <div class="overflow-x-auto border rounded-2xl"><table class="w-full planilla"><thead class="bg-slate-100"><tr><th>N°</th><th class="text-left">Estudiante</th>
+      ${A.map(a => `<th class="bg-sky-50">${esc(a)}<br><small>nota disciplinar → nota del proyecto</small></th>`).join('')}<th class="bg-violet-50">Nota conjunta<br><small>${d.esResp ? '(usted la ingresa)' : '(solo lectura)'}</small></th>
+      ${uno ? '<th>Mejora</th><th>Sumativa efectiva</th><th>Promedio formativo</th><th>Nota trimestral</th>' : ''}</tr></thead><tbody>${rows}</tbody></table></div>`;
+  if (bloqueadas) $('pl-area').insertAdjacentHTML('afterbegin', '<div class="aviso-ajenas text-[11px] mb-2 bg-slate-100 border rounded-xl p-2">🔒 Las casillas en gris fueron registradas por otro docente y no se pueden modificar; puede llenar las vacías. Si hay un error, lo corrige Vicerrectorado o Rectorado.</div>');
+  if (!d.esResp) d.estudiantes.forEach((e, i) => { const x = $('pc-' + i); x.disabled = true; x.classList.add('bg-slate-50'); });
+  $('pl-area').oninput = $('pl-area').onchange = ev => { const m = String(ev.target.id).match(/^p[dc]-(\d+)/); if (m) recalcProy(Number(m[1])); };
   d.estudiantes.forEach((e, i) => recalcProy(i));
   $('pl-acciones').innerHTML = ed && d.soyParticipante ? '<button onclick="guardarProyecto()" class="btn btn-primary">💾 Guardar proyecto en Drive</button>' : '';
 }
 function valProy(v, E) { if (v === '' || v == null) return null; if (E) { const r = LETRAS.indexOf(v); return r < 0 ? NaN : r + 1; } return numC(v); }
 function recalcProy(i) {
-  const d = S.pl.data, e = d.estudiantes[i], E = d.elem;
-  const dv = valProy($('pd-' + i).value, E), mv = valProy($('pv-' + i).value, E);
-  ['pd-', 'pv-'].forEach((p, k) => $(p + i).classList.toggle('invalida', Number.isNaN(k ? mv : dv)));
-  if (Number.isNaN(dv) || Number.isNaN(mv)) return;
-  const sum = e.otrosSum + (mv === null ? 0 : mv), n = e.otrosN + (mv === null ? 0 : 1), prom = n ? trunc2(sum / n) : null;
+  const d = S.pl.data, E = d.elem, A = d.misAsig || [];
   const L = x => LETRAS[Math.min(10, Math.max(1, Math.round(x))) - 1];
-  $('pp-' + i).innerHTML = prom === null ? '<span class="text-slate-400">—</span>' : (E ? L(prom) : f2(prom)) + `<br><small class="text-slate-500">${n} de ${d.totalDocentes} docentes</small>`;
-  const np = dv !== null && prom !== null ? (E ? L((dv + prom) / 2) : trunc2((dv + prom) / 2)) : '';
-  $('pn-' + i).textContent = np === '' ? 'Pendiente' : (E ? np : f2(np));
-  $('pn-' + i).className = 'font-black ' + (np === '' ? 'text-slate-400' : (!E && np < S.cat.params.notaMin ? 'text-red-600' : 'text-emerald-700'));
+  const cv = valProy($('pc-' + i).value, E); $('pc-' + i).classList.toggle('invalida', Number.isNaN(cv));
+  A.forEach((a, k) => {
+    const dv = valProy($('pd-' + i + '-' + k).value, E), out = $('pn-' + i + '-' + k);
+    $('pd-' + i + '-' + k).classList.toggle('invalida', Number.isNaN(dv));
+    if (Number.isNaN(dv) || Number.isNaN(cv)) { out.textContent = ''; return; }
+    const np = dv !== null && cv !== null ? (E ? L((dv + cv) / 2) : trunc2((dv + cv) / 2)) : '';
+    out.textContent = np === '' ? 'Pendiente' : '→ ' + (E ? np : f2(np));
+    out.className = 'text-[10px] font-black ' + (np === '' ? 'text-slate-400' : (!E && np < S.cat.params.notaMin ? 'text-red-600' : 'text-emerald-700'));
+  });
 }
 async function guardarProyecto() {
   if ($('pl-area').querySelector('.invalida')) return toast('Corrija las notas marcadas en rojo.', 'err');
-  const filas = S.pl.data.estudiantes.map((e, i) => ({ id: e.id, disc: $('pd-' + i).value.trim(), val: $('pv-' + i).value.trim() }));
+  const d = S.pl.data, A = d.misAsig || [];
+  const filas = d.estudiantes.map((e, i) => { const o = { id: e.id, disc: {} }; A.forEach((a, k) => o.disc[a] = $('pd-' + i + '-' + k).value.trim()); if (d.esResp) o.conj = $('pc-' + i).value.trim(); return o; });
   let ok = false;
-  await run(async () => { const r = await apiT('apiGuardarProyecto', S.pl.ctx, filas); toast(r.mensaje, 'ok'); ok = true; S.sucio = false; });
+  await run(async () => { const r = await apiT('apiGuardarProyecto', Object.assign({}, S.pl.ctx, { numProy: d.proyecto.numero }), filas); toast(r.mensaje, 'ok'); ok = true; S.sucio = false; });
   if (ok) plCargar();
 }
 // ---- v4.18: proyecto transdisciplinar (Inicial y Preparatoria) ----
@@ -1802,7 +1815,8 @@ async function guardarTrans() {
 function renderMejorasDoc(l) {
   S.pl.data = { mejoras: l };
   const P = S.cat.params;
-  $('pl-area').innerHTML = `<div class="text-[11px] mb-2 bg-sky-50 border border-sky-200 rounded-xl p-2">Mejoras autorizadas por Rectorado o Vicerrectorado. Registre la nota de la evaluación: <b>directa</b> → (inicial + evaluación) / 2, hasta ${f2(P.topeMejDir)}; <b>con refuerzo</b> → (inicial + nueva evaluación) / 2, hasta ${f2(P.topeMejRef)}. Nunca baja de la nota inicial.</div>
+  $('pl-area').innerHTML = `<div class="text-[11px] mb-2 bg-sky-50 border border-sky-200 rounded-xl p-2">Mejoras autorizadas por Rectorado o Vicerrectorado. Registre la nota de la evaluación: <b>directa</b> → (inicial + evaluación) / 2, hasta ${f2(P.topeMejDir)}; <b>con refuerzo</b> → (inicial + nueva evaluación) / 2, hasta ${f2(P.topeMejRef)}. Nunca baja de la nota inicial.
+      <br><b>Proyecto interdisciplinario:</b> la mejora se aplica <b>solo a la nota disciplinar</b>: disciplinar mejorada = (disciplinar + evaluación) / 2; la sumativa = (disciplinar mejorada + nota conjunta) / 2, con los mismos topes. La nota conjunta no cambia.</div>
     <div class="overflow-x-auto border rounded-2xl"><table class="w-full planilla"><thead class="bg-slate-100"><tr><th class="text-left">Estudiante</th><th>Curso</th><th class="text-left">Asignatura</th><th>Trim.</th><th>Tipo</th><th>Nota inicial</th><th>Plazo</th><th>Nota de la evaluación</th><th>Resultado</th><th>Estado</th><th></th></tr></thead><tbody>
     ${l.map((m, i) => `<tr class="${m.estado === 'AUTORIZADA' ? 'bg-amber-50' : ''}"><td style="text-align:left" class="font-semibold">${esc(m.estudiante)}</td><td>${esc(m.grado + ' ' + m.paralelo)}<br><small>${esc(m.jornada)}</small></td><td style="text-align:left">${esc(m.asignatura)}</td><td>${esc(m.trimestre)}°</td>
       <td class="text-[10px] font-bold">${m.tipo === 'DIRECTA' ? 'Directa' : 'Con refuerzo'}</td><td>${f2(m.notaInicial)}</td><td class="text-[10px]">${esc(m.limite || '')}</td>
@@ -1814,7 +1828,13 @@ function prevMejora(i) {
   const m = S.pl.data.mejoras[i], P = S.cat.params, n = numC($('mv-n-' + i).value), s = Number(m.notaInicial);
   $('mv-n-' + i).classList.toggle('invalida', Number.isNaN(n));
   if (n === null || Number.isNaN(n)) { $('mv-r-' + i).textContent = ''; return; }
-  $('mv-r-' + i).textContent = f2(Math.max(s, Math.min(m.tipo === 'DIRECTA' ? P.topeMejDir : P.topeMejRef, trunc2((s + n) / 2))));
+  const tope = m.tipo === 'DIRECTA' ? P.topeMejDir : P.topeMejRef;
+  if (m.disc !== '' && m.disc != null && m.conj !== '' && m.conj != null) { // v4.24: proyecto – mejora solo de la disciplinar
+    const dm = Math.max(Number(m.disc), trunc2((Number(m.disc) + n) / 2));
+    $('mv-r-' + i).innerHTML = f2(Math.max(s, Math.min(tope, trunc2((dm + Number(m.conj)) / 2)))) + `<br><small class="text-slate-500 font-normal">disciplinar ${f2(m.disc)} → ${f2(dm)} · conjunta ${f2(m.conj)}</small>`;
+    return;
+  }
+  $('mv-r-' + i).textContent = f2(Math.max(s, Math.min(tope, trunc2((s + n) / 2))));
 }
 async function registrarMejora(i) {
   const m = S.pl.data.mejoras[i], v = $('mv-n-' + i).value.trim();
@@ -1866,7 +1886,14 @@ function iniProyectos() {
     $('pj-gra').innerHTML = opts(gradosList().filter(g => !esIni(g)));
     $('pj-par').innerHTML = S.cat.paralelos.map(p => `<label class="flex items-center gap-1"><input type="checkbox" class="pj-p" value="${p}" checked> ${p}</label>`).join('');
   }
-  pjAsignaturas(); cargarProyectos();
+  pjAsignaturas(); pjNumero(); cargarProyectos();
+}
+// v4.23: el Proyecto 2 solo en Bachillerato; la nota conjunta la ingresa el tutor o el docente de una asignatura del proyecto
+function pjNumero() { const bgu = /bachillerato/i.test($('pj-gra').value || ''), o = $('pj-num').querySelector('option[value="2"]'); o.disabled = !bgu; if (!bgu) $('pj-num').value = '1'; }
+function pjResp(sel) {
+  const v = sel !== undefined ? sel : $('pj-resp').value, a = [...document.querySelectorAll('.pj-a:checked')].map(x => x.value);
+  $('pj-resp').innerHTML = '<option value="TUTOR">Tutor/a del curso</option>' + a.map(x => `<option value="${esc(x)}">Docente de ${esc(x)}</option>`).join('');
+  $('pj-resp').value = a.includes(v) ? v : 'TUTOR';
 }
 async function pjAsignaturas(marcadas) {
   try {
@@ -1876,13 +1903,13 @@ async function pjAsignaturas(marcadas) {
 }
 async function guardarProyectoDef() {
   const def = { jornada: $('pj-jor').value, trimestre: $('pj-trim').value, grado: $('pj-gra').value, numero: $('pj-num').value, nombre: $('pj-nom').value,
-    paralelos: [...document.querySelectorAll('.pj-p:checked')].map(x => x.value), asignaturas: [...document.querySelectorAll('.pj-a:checked')].map(x => x.value) };
+    paralelos: [...document.querySelectorAll('.pj-p:checked')].map(x => x.value), asignaturas: [...document.querySelectorAll('.pj-a:checked')].map(x => x.value), responsable: $('pj-resp').value };
   await run(async () => { const r = await apiT('apiGuardarProyectoDef', def); toast(r.mensaje + (r.avisos && r.avisos.length ? ' ⚠️ ' + r.avisos.join('; ') : ''), r.avisos && r.avisos.length ? 'err' : 'ok'); });
   cargarProyectos();
 }
 function editarProyectoDef(i) {
-  const p = S.pj.proyectos[i]; $('pj-gra').value = p.grado; $('pj-num').value = p.numero; $('pj-nom').value = p.nombre;
-  document.querySelectorAll('.pj-p').forEach(x => x.checked = x.value === p.paralelo); pjAsignaturas(p.asignaturas); window.scrollTo(0, 0);
+  const p = S.pj.proyectos[i]; $('pj-gra').value = p.grado; pjNumero(); $('pj-num').value = p.numero; $('pj-nom').value = p.nombre;
+  document.querySelectorAll('.pj-p').forEach(x => x.checked = x.value === p.paralelo); pjAsignaturas(p.asignaturas).then(() => pjResp(p.resp || 'TUTOR')); window.scrollTo(0, 0);
 }
 async function quitarProyectoDef(clave) {
   if (!confirm('¿Retirar este proyecto?')) return;
@@ -1892,10 +1919,10 @@ async function quitarProyectoDef(clave) {
 async function cargarProyectos() {
   await run(async () => {
     const r = await apiT('apiCargarProyectosDef', { jornada: $('pj-jor').value, trimestre: $('pj-trim').value }); S.pj = r;
-    $('pj-area').innerHTML = `<div class="overflow-x-auto border rounded-2xl"><table class="w-full planilla text-[11px]"><thead class="bg-sky-50"><tr><th>Curso</th><th>N°</th><th class="text-left">Proyecto</th><th class="text-left">Asignaturas</th><th>Docentes</th><th class="text-left">Pendientes (docente: disciplinares / valoraciones)</th><th></th></tr></thead><tbody>
-      ${r.proyectos.map((p, i) => `<tr><td>${esc(p.grado + ' ' + p.paralelo)}</td><td>${p.numero}</td><td style="text-align:left" class="font-semibold">${esc(p.nombre)}</td><td style="text-align:left">${esc(p.asignaturas.join(', '))}</td><td>${p.participantes}</td>
+    $('pj-area').innerHTML = `<div class="overflow-x-auto border rounded-2xl"><table class="w-full planilla text-[11px]"><thead class="bg-sky-50"><tr><th>Curso</th><th>N°</th><th class="text-left">Proyecto</th><th class="text-left">Asignaturas</th><th>Docentes</th><th class="text-left">Nota conjunta</th><th class="text-left">Pendientes (docente: disciplinares / conjuntas)</th><th></th></tr></thead><tbody>
+      ${r.proyectos.map((p, i) => `<tr><td>${esc(p.grado + ' ' + p.paralelo)}</td><td>${p.numero}</td><td style="text-align:left" class="font-semibold">${esc(p.nombre)}</td><td style="text-align:left">${esc(p.asignaturas.join(', '))}</td><td>${p.participantes}</td><td style="text-align:left">${esc(p.respTxt || '')}</td>
         <td style="text-align:left">${p.pendientes.length ? p.pendientes.map(x => `<div class="text-red-700">⚠️ ${esc(x.docente)}: ${x.faltanDisc} / ${x.faltanVal}</div>`).join('') : '<b class="text-emerald-700">✅ Completo</b>'}</td>
-        <td class="whitespace-nowrap"><button onclick="editarProyectoDef(${i})" class="btn btn-sec py-1">✏️</button><button onclick="quitarProyectoDef('${esc(p.clave)}')" class="btn bg-red-50 text-red-700 py-1">🗑</button></td></tr>`).join('') || '<tr><td colspan="7" class="text-slate-400 py-3">Aún no hay proyectos registrados para este trimestre.</td></tr>'}</tbody></table></div>`;
+        <td class="whitespace-nowrap"><button onclick="editarProyectoDef(${i})" class="btn btn-sec py-1">✏️</button><button onclick="quitarProyectoDef('${esc(p.clave)}')" class="btn bg-red-50 text-red-700 py-1">🗑</button></td></tr>`).join('') || '<tr><td colspan="8" class="text-slate-400 py-3">Aún no hay proyectos registrados para este trimestre.</td></tr>'}</tbody></table></div>`;
   });
 }
 // ---- v4.18: mejoras (Rectorado / Vicerrectorado) ----
@@ -1989,7 +2016,7 @@ function bloquearAjenas(fn, d) {
   let n = 0;
   const off = el => { if (el && !el.disabled) { el.disabled = true; el.classList.add('bloq-ajena'); n++; } };
   L.forEach((e, i) => {
-    if (fn === 'renderProyecto') { if (e.bloqDisc) off($('pd-' + i)); return; }
+    if (fn === 'renderProyecto') return; // v4.23: lo resuelve renderProyecto (vista horizontal)
     (e.bloq || []).forEach(c => {
       if (fn === 'renderFormativa') { const k = Number(c.slice(1)) - 1; if (c[0] === 'F') off(qf(i, k, 'f')); else { off(qf(i, k, 'r')); off(qf(i, k, 'chk')); } }
       else if (fn === 'renderSumativa') off($('ss-' + i));
@@ -3088,7 +3115,7 @@ function plCambio(cargar) {
   const asig = $('pl-asig').value, tipoA = tipoAsig(asig);
   let subs;
   if (esIni(g)) subs = [['ini', '🌱 Destrezas por corte']].concat(S.cat.params.piloto ? [['trans', '🌱 Proyecto transdisciplinar (trimestre)']] : []);
-  else if (tipoA === 'LECTURA') subs = [['lec', '📖 Animación a la lectura (cualitativa)']];
+  else if (tipoA === 'LECTURA') subs = [['lec', '📖 Animación a la lectura (hasta 6 notas → cualitativa)']];
   else if (tipoA === 'OVP') subs = [['ovp', '🧭 Orientación Vocacional y Profesional (cualitativa)']];
   else if (tipoA === 'OPTATIVA') subs = [['opt', /PPE|participaci[oó]n estudiantil/i.test(asig) ? '🙋 Participación Estudiantil (registro interno, no va a la boleta)' : '🎨 Optativa – evaluación cualitativa (no se promedia)']];
   else {
@@ -3098,6 +3125,8 @@ function plCambio(cargar) {
     else if (!esElementalSinSum(g)) subs.push(['sum', '🎯 Evaluación sumativa y mejora (trimestre)']);
     if (ordenG(g) >= 5) subs.push(['mej', '📝 Mejoras autorizadas']);
   }
+  // v4.23: la nota conjunta del proyecto la ingresa el tutor (o el docente designado por Vicerrectorado)
+  if (tutor && S.cat.params.piloto && !esIni(g) && !subs.some(s => s[0] === 'proy')) subs.push(['proy', '🧩 Proyecto interdisciplinario: nota conjunta (tutor)']);
   // Periodos pedagógicos que registra el docente tutor (no dependen de la asignatura elegida)
   if (tutor) subs.push(['aia', '⭐ Acompañamiento Integral y comportamiento (tutor)']);
   if (tutor && g === '3° Bachillerato') subs.push(['efb', '🎓 Evaluación final de Bachillerato (tutor)']);
@@ -3149,7 +3178,7 @@ async function plCargar() {
     if ((S.sub === 'form' || S.sub === 'ini' || S.sub === 'ref') && !c.corteId) throw new Error('Rectoría no ha configurado cortes para este trimestre.');
     if (S.sub === 'form') { const d = await apiT('apiCargarFormativa', c); if (vigente()) renderFormativa(d); }
     else if (S.sub === 'sum') { const d = await apiT('apiCargarSumativa', c); if (vigente()) renderSumativa(d); }
-    else if (S.sub === 'proy') { const d = await apiT('apiCargarProyecto', c); if (vigente()) renderProyecto(d); }
+    else if (S.sub === 'proy') { const d = await apiT('apiCargarProyecto', Object.assign({}, c, { numProy: S.pl.numProy || '' })); if (vigente()) renderProyecto(d); }
     else if (S.sub === 'trans') { const d = await apiT('apiCargarTrans', c); if (vigente()) renderTrans(d); }
     else if (S.sub === 'mej') { const d = await apiT('apiMisMejoras'); if (vigente()) renderMejorasDoc(d); }
     else if (S.sub === 'ini') { const d = await apiT('apiCargarInicial', c); if (vigente()) renderInicial(d); }
@@ -3187,7 +3216,39 @@ function califCualC(tipo, vals, manual) {
   const calif = (!O && !N) ? (suma >= 35 ? 'A+' : suma >= 33 ? 'A-' : suma >= 30 ? 'B+' : 'B-') : (!N ? 'C+' : (suma >= 18 ? 'C-' : suma >= 15 ? 'D+' : suma >= 13 ? 'D-' : suma >= 11 ? 'E+' : 'E-'));
   return { suma, calif };
 }
+// v4.23: Animación a la lectura – el docente ingresa una nota de 0 a 10 y el sistema la convierte en letra (A+ … E-)
+function letraNotaC(n) { if (n === null || n === '' || isNaN(n)) return ''; const r = (S.cat.escala || []).filter(x => x.tipo === 'ELEMENTAL').find(x => n >= x.desde - 1e-9 && n <= x.hasta + 1e-9); return r ? r.codigo : ''; }
+function renderLectura(d) {
+  // v4.24: hasta 6 notas de 0 a 10 por trimestre → promedio simple (dos decimales truncados) → valoración A+ … E-
+  S.pl.data = d; banner(d);
+  if (!d.estudiantes.length) return sinEstudiantes();
+  const ed = d.permiso.editable, K = [0, 1, 2, 3, 4, 5];
+  let bloqueadas = 0;
+  const rows = d.estudiantes.map((e, i) => {
+    const ns = e.notas && e.notas.length ? e.notas : [e.nota || '', '', '', '', '', ''];
+    const cel = K.map(k => { const off = (e.bloq || []).includes('N' + (k + 1)); if (off && ed) bloqueadas++;
+      return `<td><input id="ln-${i}-${k}" class="nota${off ? ' bloq-ajena' : ''}" value="${esc(ns[k])}" ${!ed || off ? 'disabled' : ''} inputmode="decimal"></td>`; }).join('');
+    const ant = ns.every(x => x === '' || x == null) && e.calif ? `<div class="text-[9px] text-slate-500">Registrada antes por indicadores: ${esc(e.calif)}</div>` : '';
+    return `<tr><td>${i + 1}</td><td class="font-semibold">${esc(e.nombres)}${ant}</td>${cel}<td id="lp-${i}" class="font-bold"></td>
+      <td id="lv-${i}" class="font-black text-emerald-800"></td><td><input id="qo-${i}" class="inp" value="${esc(e.obs)}" ${ed ? '' : 'disabled'}></td>${celdaGrab(i, e.fecha)}</tr>`; }).join('');
+  $('pl-area').innerHTML = (bloqueadas ? '<div class="aviso-ajenas text-[11px] mb-2 bg-slate-100 border rounded-xl p-2">🔒 Las casillas en gris fueron registradas por otro docente y no se pueden modificar; puede llenar las vacías.</div>' : '') +
+    `<div class="text-[11px] text-slate-600 mb-2 bg-violet-50 border border-violet-200 rounded-xl p-2"><b>Animación a la lectura</b>: registre <b>hasta 6 notas de 0 a 10</b> en el trimestre. Se promedian (promedio simple) y el promedio se convierte en la valoración cualitativa (A+ … E-). En la <b>boleta</b> aparece solo la letra; en los <b>informes de calificaciones</b>, el promedio y la letra. No se promedia con las demás asignaturas ni es requisito de promoción (Art. 9).</div>
+    <div class="overflow-x-auto border rounded-2xl"><table class="w-full planilla"><thead class="bg-violet-50"><tr><th>N°</th><th class="text-left min-w-[160px]">Estudiante</th>${K.map(k => `<th>Nota ${k + 1}</th>`).join('')}<th>Promedio</th><th>Valoración</th><th class="min-w-[180px]">Observación</th><th>Drive</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  $('pl-area').oninput = $('pl-area').onchange = ev => { const m = String(ev.target.id).match(/^ln-(\d+)-\d$/); if (m) recalcLectura(Number(m[1])); };
+  d.estudiantes.forEach((e, i) => recalcLectura(i));
+  $('pl-acciones').innerHTML = ed ? '<button onclick="guardarCualitativa()" class="btn btn-primary">💾 Guardar animación a la lectura en Drive</button>' : '';
+}
+function recalcLectura(i) {
+  const v = [];
+  let bad = false;
+  [0, 1, 2, 3, 4, 5].forEach(k => { const el = $('ln-' + i + '-' + k), t = el.value.trim(), n = t === '' ? null : numC(t), mal = n !== null && (Number.isNaN(n) || n < 0 || n > 10);
+    el.classList.toggle('invalida', mal); if (mal) bad = true; else if (n !== null) v.push(n); });
+  const e = S.pl.data.estudiantes[i], p = !bad && v.length ? trunc2(v.reduce((a, b) => a + b, 0) / v.length) : null;
+  $('lp-' + i).textContent = p === null ? '' : f2(p) + (v.length ? ` (${v.length})` : '');
+  $('lv-' + i).textContent = bad ? '' : (p === null ? (e.calif && !(e.notas || []).some(x => x !== '' && x != null) ? e.calif : '') : letraNotaC(p));
+}
 function renderCualitativa(d) {
+  if (d.tipo === 'LECTURA') return renderLectura(d);
   S.pl.data = d; banner(d);
   if (!d.estudiantes.length) return sinEstudiantes();
   const ed = d.permiso.editable, dis = ed ? '' : 'disabled', ind = d.indicadores, tipo = d.tipo;
@@ -3231,6 +3292,14 @@ function recalcCual(i) {
 }
 async function guardarCualitativa() {
   const d = S.pl.data;
+  if (d.tipo === 'LECTURA') { // v4.23
+    if ($('pl-area').querySelector('.invalida')) return toast('La nota debe estar entre 0 y 10.', 'err');
+    const filasL = d.estudiantes.map((e, i) => ({ id: e.id, notas: [0, 1, 2, 3, 4, 5].map(k => $('ln-' + i + '-' + k).value.trim()), obs: $('qo-' + i).value }));
+    let okL = false;
+    await run(async () => { const r = await apiT('apiGuardarCualitativa', S.pl.ctx, 'LECTURA', filasL); toast(r.mensaje, 'ok'); okL = true; S.sucio = false; });
+    if (okL) plCargar();
+    return;
+  }
   const filas = d.estudiantes.map((e, i) => ({ id: e.id, valores: [...$('pl-area').querySelectorAll(`select[data-i="${i}"]`)].map(x => x.value),
     calif: (d.tipo === 'OPTATIVA' || d.tipo === 'AIA') ? $('qc-' + i).value : '', obs: $('qo-' + i).value }));
   // v4.10: el lineamiento evalúa SIEMPRE las 9 habilidades; se avisa si alguna quedó vacía
@@ -3724,14 +3793,14 @@ function mostrarReporte(r) {
     // v4.10: informe del curso con todas las asignaturas (Vicerrectorado / Rectorado)
     orient = 'landscape';
     const A = r.asignaturas, nv = r.niveles, cod = (x, c) => r.cualitativa ? (c || '') : f2(x);
-    const filas = r.filas.map((x, n) => `<tr><td class="c">${n + 1}</td><td>${esc(x.nombres)}</td>${x.notas.map((v, i) => `<td class="c ${v !== '' && nivelDe(nv, x.cods[i]) >= nv.length - 2 && !r.cualitativa && v < r.params.notaMin ? 'alerta' : ''}">${v === '' ? '—' : cod(v, x.cods[i])}</td>`).join('')}<td class="c b">${x.prom === '' ? '—' : cod(x.prom, x.promCod)}</td></tr>`);
-    filas.push(`<tr><td colspan="2" class="b c">PROMEDIO DE LA ASIGNATURA</td>${A.map((a, i) => { const p = promedio(r.filas.map(x => x.notas[i])); return `<td class="c b">${p === '' ? '—' : f2(p)}</td>`; }).join('')}<td class="c b">${f2(promedio(r.filas.map(x => x.prom)))}</td></tr>`);
+    const filas = r.filas.map((x, n) => `<tr><td class="c">${n + 1}</td><td>${esc(x.nombres)}</td>${x.notas.map((v, i) => `<td class="c ${v !== '' && nivelDe(nv, x.cods[i]) >= nv.length - 2 && !r.cualitativa && v < r.params.notaMin ? 'alerta' : ''}">${v === '' ? '—' : cod(v, x.cods[i])}</td>`).join('')}<td class="c b">${x.prom === '' ? '—' : cod(x.prom, x.promCod)}</td>${r.lectura ? `<td class="c">${esc(x.lectura || '—')}</td>` : ''}</tr>`);
+    filas.push(`<tr><td colspan="2" class="b c">PROMEDIO DE LA ASIGNATURA</td>${A.map((a, i) => { const p = promedio(r.filas.map(x => x.notas[i])); return `<td class="c b">${p === '' ? '—' : f2(p)}</td>`; }).join('')}<td class="c b">${f2(promedio(r.filas.map(x => x.prom)))}</td>${r.lectura ? '<td></td>' : ''}</tr>`);
     const porAsig = A.map((a, i) => ({ nombre: a, conteo: contar(nv, r.filas.map(x => x.cods[i])), prom: promedio(r.filas.map(x => x.notas[i])) }));
     const tab = `<table><thead><tr><th style="text-align:left">Asignatura</th><th>Promedio</th>${nv.map(n => `<th>${esc(n.codigo === 'ALC' ? 'Alcanzado' : n.codigo === 'PRO' ? 'En proceso' : n.codigo === 'INI' ? 'Iniciado' : n.codigo)}</th>`).join('')}<th>Con nota</th><th>% en los niveles más bajos</th></tr></thead><tbody>
       ${porAsig.map(p => { const t = p.conteo.reduce((a, b) => a + b, 0), bajos = p.conteo.slice(-2).reduce((a, b) => a + b, 0); return `<tr class="${t && bajos / t >= 0.3 ? 'alerta' : ''}"><td>${esc(p.nombre)}</td><td class="c b">${p.prom === '' ? '—' : f2(p.prom)}</td>${p.conteo.map(c => `<td class="c">${c}</td>`).join('')}<td class="c">${t}</td><td class="c">${t ? (bajos * 100 / t).toFixed(1) + '%' : '—'}</td></tr>`; }).join('')}</tbody></table>`;
     h = encabezado(r, `Calificaciones del curso – todas las asignaturas`, r.periodoTxt) +
       ficha([['Jornada', F.jornada], ['Curso', curso], ['Docente tutor/a', r.tutor], ['Estudiantes', r.filas.length]]) +
-      tabla(['N°', 'Estudiante'].concat(A, ['Promedio']), filas) +
+      tabla(['N°', 'Estudiante'].concat(A, ['Promedio'], r.lectura ? ['Animación a la lectura (nota y valoración; no se promedia)'] : []), filas) +
       `<div class="sec" style="margin-top:8px">Tabulación por asignatura – nivel de logro</div>` + tab +
       `<div class="graf">${svgApilado(nv, porAsig, 'Nivel de logro por asignatura', 560)}${svgPromedios(porAsig.map(p => ({ nombre: p.nombre, valor: p.prom })), 'Promedio por asignatura', Math.max(300, 46 * A.length), 210, r.params.notaMin)}</div>` +
       `<div style="font-size:9px;margin-top:3px">Las filas resaltadas son asignaturas con 30 % o más de estudiantes en los dos niveles más bajos.</div>` +
@@ -3748,10 +3817,11 @@ function mostrarReporte(r) {
     orient = 'landscape';
     const nom = { AIA: 'Cívica y Acompañamiento Integral en el Aula', OVP: 'Orientación Vocacional y Profesional', LECTURA: 'Animación a la lectura', OPTATIVA: r.asignatura }[r.tipoCual];
     const escTxt = r.tipoCual === 'OPTATIVA' ? 'Escala A+ … E- (Art. 7 y 9)' : (r.tipoCual === 'OVP' ? 'S Siempre = 3 · F Frecuentemente = 2 · O Ocasionalmente = 1 · Nota final (suma): 14–15 A+, 10–13 A-, 0–9 B+' : 'S Siempre · F Frecuentemente · O Ocasionalmente · N Nunca');
-    const filas = r.filas.map((x, n) => `<tr><td class="c">${n + 1}</td><td>${esc(x.nombres)}</td>${x.valores.map(v => `<td class="c">${esc(v || '—')}</td>`).join('')}${r.tipoCual === 'OPTATIVA' ? '' : `<td class="c">${esc(x.suma)}</td>`}<td class="c b">${esc(x.calif || '—')}</td><td>${esc(x.desc)}</td><td>${esc(x.obs)}</td></tr>`);
+    const lecN = r.tipoCual === 'LECTURA' && r.filas.some(x => x.nota !== '' && x.nota != null); // v4.23/4.24: notas, promedio y letra
+    const filas = r.filas.map((x, n) => `<tr><td class="c">${n + 1}</td><td>${esc(x.nombres)}</td>${lecN ? (x.notas || []).map(v => `<td class="c">${v === '' || v == null ? '—' : f2(v)}</td>`).join('') + `<td class="c b">${x.nota === '' || x.nota == null ? '—' : f2(x.nota)}</td>` : ''}${(lecN ? [] : x.valores).map(v => `<td class="c">${esc(v || '—')}</td>`).join('')}${r.tipoCual === 'OPTATIVA' || lecN ? '' : `<td class="c">${esc(x.suma)}</td>`}<td class="c b">${esc(x.calif || '—')}</td><td>${esc(x.desc)}</td><td>${esc(x.obs)}</td></tr>`);
     h = encabezado(r, `${nom} – ${F.trimestre}° trimestre`, 'Evaluación cualitativa: no se promedia y no es requisito de promoción (Art. 9 del Acuerdo 82-A)') +
       ficha([['Jornada', F.jornada], ['Curso', curso], ['Docente', r.docente], r.eje ? ['Eje', r.eje] : null, ['Escala', escTxt]]) +
-      tabla(['N°', 'Estudiante'].concat(r.indicadores.map((t, k) => `${k + 1}. ${esc(t)}`), r.tipoCual === 'OPTATIVA' ? [] : ['Suma'], ['Valoración', 'Descripción', 'Observación']), filas) +
+      tabla(['N°', 'Estudiante'].concat(lecN ? ['Nota 1', 'Nota 2', 'Nota 3', 'Nota 4', 'Nota 5', 'Nota 6', 'Promedio'] : r.indicadores.map((t, k) => `${k + 1}. ${esc(t)}`), r.tipoCual === 'OPTATIVA' || lecN ? [] : ['Suma'], ['Valoración', 'Descripción', 'Observación']), filas) +
       (r.obsGeneral ? `<table><tr><th style="width:22%">Observación general</th><td>${esc(r.obsGeneral)}</td></tr></table>` : '') +
       firmas([[r.docente, r.rolDocente || 'Docente', 'REALIZADO'], vice(r)]) + norma(r);
   } else if (r.tipo === 'boleta') {
