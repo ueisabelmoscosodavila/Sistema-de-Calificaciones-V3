@@ -232,7 +232,7 @@
           <div id="gc-resumen" class="flex flex-wrap gap-1 text-[10px]"></div>
         </div>
         <div class="overflow-x-auto border rounded-2xl"><table class="tabla"><thead><tr>
-          <th>Nombre</th><th>Tipo</th><th>Trimestre</th><th>Jornada</th><th>Cursos</th><th>Inicio</th><th>Cierre</th><th>Estado hoy</th><th>Observación</th><th></th>
+          <th>Nombre</th><th>Tipo</th><th>Trimestre</th><th>Jornada</th><th>Cursos</th><th>Inicio</th><th>Cierre</th><th title="Solo para cortes: cuántos insumos registra el docente en ese corte (1 a 9)">Máx. insumos</th><th>Estado hoy</th><th>Observación</th><th></th>
         </tr></thead><tbody id="per-body"></tbody></table></div>
       </div>
       <div class="card space-y-3 border-amber-200">
@@ -345,7 +345,9 @@
           <div><label class="lbl">Jornada</label><select id="cs-jor" class="inp"></select></div>
           <div><label class="lbl">Año de básica / curso</label><select id="cs-gra" class="inp"></select></div>
           <div><label class="lbl">Paralelo</label><select id="cs-par" class="inp"></select></div>
+          <div><label class="lbl">Nivel / subnivel</label><select id="cs-niv" class="inp"><option value="">Todos</option>${['Inicial', 'Preparatoria', 'Elemental', 'Media', 'Superior', 'Bachillerato'].map(n => `<option>${n}</option>`).join('')}</select></div>
           <div class="col-span-2 sm:col-span-1"><label class="lbl">Comisión</label><select id="cs-com" class="inp"></select></div>
+          <div><label class="lbl">Tutoría</label><select id="cs-tut" class="inp"><option value="">Todos</option><option value="SI">Solo tutores</option><option value="NO">Solo no tutores</option></select></div>
           <button onclick="consultarDocentes()" class="btn btn-primary">🔎 Buscar</button>
           <div class="flex gap-1"><button onclick="consultarDocentes('imprimir')" class="btn btn-sec">🖨️</button><button onclick="consultarDocentes('excel')" class="btn btn-ok">⬇️ Excel</button></div>
         </div>
@@ -1129,7 +1131,7 @@ api('apiInfoPublica').then(i => {
   revisarVersion(i.version);
 }).catch(() => {});
 // ---- v4.20: la página se actualiza sola cuando hay una versión nueva del sistema ----
-const VERSION_CLIENTE = '4.24';
+const VERSION_CLIENTE = '4.25';
 function revisarVersion(v) {
   if (!v || v === VERSION_CLIENTE || EN_APPS_SCRIPT) return;
   if (S.sucio) return; // nunca se recarga con notas sin guardar
@@ -1612,6 +1614,7 @@ function pintarPeriodos() {
     <td><select class="inp" ${p.tipo === 'ANUAL' ? 'disabled' : ''} onchange="S.per[${i}].grados=this.value?[this.value]:[];pintarPeriodos()">${opts(gradosList(), (p.grados || [])[0] || '', 'Todos los cursos')}</select></td>
     <td><input type="date" class="inp" value="${esc(p.inicio)}" onchange="S.per[${i}].inicio=this.value;pintarPeriodos()"></td>
     <td><input type="date" class="inp" value="${esc(p.cierre)}" onchange="S.per[${i}].cierre=this.value;pintarPeriodos()"></td>
+    <td>${p.tipo === 'CORTE' ? `<input type="number" min="1" max="9" class="inp w-16" value="${esc(p.maxIns || '')}" placeholder="9" onchange="S.per[${i}].maxIns=this.value">` : '<span class="text-slate-300">—</span>'}</td>
     <td><span class="px-2 py-0.5 rounded-full font-bold text-[10px] ${badge(estadoC(p))}">${estadoC(p)}</span></td>
     <td><input class="inp" value="${esc(p.obs)}" onchange="S.per[${i}].obs=this.value"></td>
     <td><button onclick="eliminarPeriodo(${i})" class="btn bg-red-50 text-red-700 py-1">🗑</button></td></tr>`).join('');
@@ -1751,7 +1754,8 @@ function renderProyecto(d) {
   const ed = d.permiso.editable, E = d.elem, A = d.misAsig || [], uno = A.length === 1 && !E;
   let bloqueadas = 0;
   const inp = (id, v, off) => { const dis = !ed || off ? 'disabled' : ''; if (off && ed) bloqueadas++; const cl = off ? ' bloq-ajena' : '';
-    return E ? `<select id="${id}" class="inp text-[11px] px-1 w-16${cl}" ${dis}>${opts(LETRAS.slice().reverse(), v || '', '—')}</select>` : `<input class="nota${cl}" id="${id}" value="${esc(v)}" ${dis} inputmode="decimal">`; };
+    // v4.25: Elemental también se registra con números; al lado se muestra la letra y su nivel
+    return `<input class="nota${cl}" id="${id}" value="${esc(v)}" ${dis} inputmode="decimal">${E ? `<span id="lt-${id}" class="text-[10px] font-black ml-1"></span>` : ''}`; };
   const mej = m => !m ? '<span class="text-slate-300">—</span>' : `<span class="text-[10px] font-bold ${m.estado === 'REGISTRADA' ? 'text-emerald-700' : 'text-amber-800'}">${m.tipo === 'DIRECTA' ? 'Directa' : 'Con refuerzo'}: ${m.estado === 'REGISTRADA' ? esc(f2(m.nota)) + ' → ' + esc(f2(m.mejorada)) : 'por registrar'}</span>`;
   const rows = d.estudiantes.map((e, i) => `<tr><td>${i + 1}</td><td class="font-semibold" style="text-align:left">${esc(e.nombres)}</td>
     ${A.map((a, k) => `<td class="bg-sky-50">${inp('pd-' + i + '-' + k, e.disc[a], e.bloq[a])}<div id="pn-${i}-${k}" class="text-[10px] font-black"></div></td>`).join('')}
@@ -1761,7 +1765,7 @@ function renderProyecto(d) {
   $('pl-area').innerHTML = `<div class="text-[11px] mb-2 bg-teal-50 border border-teal-200 rounded-xl p-2 space-y-0.5">
       <div class="font-black text-xs flex flex-wrap items-center gap-2">🧩 Proyecto ${d.proyecto.numero}: ${esc(d.proyecto.nombre)} ${sel}</div>
       <div><b>Asignaturas:</b> ${esc(d.proyecto.asignaturas.join(', '))} · <b>Docentes del equipo (${d.totalDocentes}):</b> ${esc(d.participantes.join('; '))}</div>
-      <div><b>Nota del proyecto</b> de cada asignatura = (<b class="text-sky-800">nota disciplinar</b> 50 % + <b class="text-violet-800">nota conjunta</b> 50 %)${E ? ' – Elemental: escala A+ … E-, no cambia la nota del trimestre.' : ` → es la sumativa (${d.params.ps} %) del trimestre. La mejora la autoriza Rectorado o Vicerrectorado.`}</div>
+      <div><b>Nota del proyecto</b> de cada asignatura = (<b class="text-sky-800">nota disciplinar</b> 50 % + <b class="text-violet-800">nota conjunta</b> 50 %)${E ? ' – Elemental: registre números de 0 a 10; se convierten en letra (A+ … E-) y nivel (A alcanzado, P en proceso, I iniciado). En la boleta sale la letra; no cambia la nota del trimestre.' : ` → es la sumativa (${d.params.ps} %) del trimestre. La mejora la autoriza Rectorado o Vicerrectorado.`}</div>
       <div><b>Nota conjunta:</b> la ingresa ${esc(d.resp)}. ${d.esResp ? '<b class="text-emerald-700">Usted la ingresa.</b>' : 'Usted la puede ver, pero no modificarla.'}</div></div>
     <div class="overflow-x-auto border rounded-2xl"><table class="w-full planilla"><thead class="bg-slate-100"><tr><th>N°</th><th class="text-left">Estudiante</th>
       ${A.map(a => `<th class="bg-sky-50">${esc(a)}<br><small>nota disciplinar → nota del proyecto</small></th>`).join('')}<th class="bg-violet-50">Nota conjunta<br><small>${d.esResp ? '(usted la ingresa)' : '(solo lectura)'}</small></th>
@@ -1772,17 +1776,20 @@ function renderProyecto(d) {
   d.estudiantes.forEach((e, i) => recalcProy(i));
   $('pl-acciones').innerHTML = ed && d.soyParticipante ? '<button onclick="guardarProyecto()" class="btn btn-primary">💾 Guardar proyecto en Drive</button>' : '';
 }
-function valProy(v, E) { if (v === '' || v == null) return null; if (E) { const r = LETRAS.indexOf(v); return r < 0 ? NaN : r + 1; } return numC(v); }
+function valProy(v, E) { if (v === '' || v == null) return null; return numC(v); }
+const letraNivelC = n => { const l = letraNotaC(n); return l ? `${l} (${nivelAPIc(l)})` : ''; };
 function recalcProy(i) {
   const d = S.pl.data, E = d.elem, A = d.misAsig || [];
-  const L = x => LETRAS[Math.min(10, Math.max(1, Math.round(x))) - 1];
-  const cv = valProy($('pc-' + i).value, E); $('pc-' + i).classList.toggle('invalida', Number.isNaN(cv));
+  const okN = x => x === null || (!Number.isNaN(x) && x >= 0 && x <= 10);
+  const cv = valProy($('pc-' + i).value, E); $('pc-' + i).classList.toggle('invalida', !okN(cv));
+  if (E && $('lt-pc-' + i)) $('lt-pc-' + i).textContent = okN(cv) && cv !== null ? '→ ' + letraNivelC(cv) : '';
   A.forEach((a, k) => {
     const dv = valProy($('pd-' + i + '-' + k).value, E), out = $('pn-' + i + '-' + k);
-    $('pd-' + i + '-' + k).classList.toggle('invalida', Number.isNaN(dv));
-    if (Number.isNaN(dv) || Number.isNaN(cv)) { out.textContent = ''; return; }
-    const np = dv !== null && cv !== null ? (E ? L((dv + cv) / 2) : trunc2((dv + cv) / 2)) : '';
-    out.textContent = np === '' ? 'Pendiente' : '→ ' + (E ? np : f2(np));
+    $('pd-' + i + '-' + k).classList.toggle('invalida', !okN(dv));
+    if (E && $('lt-pd-' + i + '-' + k)) $('lt-pd-' + i + '-' + k).textContent = okN(dv) && dv !== null ? '→ ' + letraNivelC(dv) : '';
+    if (!okN(dv) || !okN(cv)) { out.textContent = ''; return; }
+    const np = dv !== null && cv !== null ? trunc2((dv + cv) / 2) : '';
+    out.textContent = np === '' ? 'Pendiente' : '→ ' + f2(np) + (E ? ' ' + letraNivelC(np) : '');
     out.className = 'text-[10px] font-black ' + (np === '' ? 'text-slate-400' : (!E && np < S.cat.params.notaMin ? 'text-red-600' : 'text-emerald-700'));
   });
 }
@@ -1795,18 +1802,30 @@ async function guardarProyecto() {
   if (ok) plCargar();
 }
 // ---- v4.18: proyecto transdisciplinar (Inicial y Preparatoria) ----
+const nivelAPIc = l => { const r = LETRAS.indexOf(l) + 1; return !r ? '' : (r >= 7 ? 'A' : (r >= 5 ? 'P' : 'I')); };
+const NIVEL_TXT = { A: 'Alcanzado', P: 'En proceso', I: 'Iniciado' };
 function renderTrans(d) {
+  // v4.25: los 6 parámetros del Anexo 3 de la Guía Docente, en horizontal, con la letra y su nivel (A / P / I)
   S.pl.data = d; banner(d);
   if (!d.estudiantes.length) return sinEstudiantes();
-  const dis = d.permiso.editable ? '' : 'disabled';
-  $('pl-area').innerHTML = `<div class="text-[11px] mb-2 bg-emerald-50 border border-emerald-200 rounded-xl p-2">🌱 Proyecto transdisciplinar del trimestre (evaluación formativa y cualitativa, sin nota numérica). Integra los ámbitos de desarrollo; ECA y Educación Física se articulan con una rúbrica compartida.</div>
-    <div class="mb-2"><label class="lbl">Nombre del proyecto</label><input id="tr-nom" class="inp" value="${esc(d.nombre)}" ${dis}></div>
-    <div class="overflow-x-auto border rounded-2xl"><table class="w-full planilla"><thead class="bg-slate-100"><tr><th>N°</th><th class="text-left">Estudiante</th><th>Valoración</th><th class="text-left">Observación (logros y avances)</th></tr></thead><tbody>
-    ${d.estudiantes.map((e, i) => `<tr><td>${i + 1}</td><td style="text-align:left" class="font-semibold">${esc(e.nombres)}</td><td><select id="tv-${i}" class="inp text-[11px] w-20" ${dis}>${opts(LETRAS.slice().reverse().concat(['NE']), e.valor || '', '—')}</select></td><td><input id="to-${i}" class="inp text-[11px]" value="${esc(e.obs)}" ${dis}></td></tr>`).join('')}</tbody></table></div>`;
-  $('pl-acciones').innerHTML = d.permiso.editable ? '<button onclick="guardarTrans()" class="btn btn-ok">💾 Guardar proyecto transdisciplinar</button>' : '';
+  const ed = d.permiso.editable, PR = d.parametros || [];
+  let bloqueadas = 0;
+  $('pl-area').innerHTML = `<div class="text-[11px] mb-2 bg-emerald-50 border border-emerald-200 rounded-xl p-2">🌱 Proyecto transdisciplinar del trimestre (Anexo 3: evaluación cualitativa, sin nota numérica). Elija la letra de cada parámetro; al lado aparece su nivel: <b>A</b> = Aprendizaje alcanzado (A+ a B-) · <b>P</b> = En proceso (C+, C-) · <b>I</b> = Iniciado (D+ a E-). En Preparatoria, ECA y Educación Física se articulan con la rúbrica compartida.</div>
+    <div class="mb-2"><label class="lbl">Nombre del proyecto</label><input id="tr-nom" class="inp" value="${esc(d.nombre)}" ${ed ? '' : 'disabled'}></div>
+    <div class="overflow-x-auto border rounded-2xl"><table class="w-full planilla"><thead class="bg-emerald-50"><tr><th>N°</th><th class="text-left min-w-[160px]">Estudiante</th>${PR.map(p => `<th class="text-[10px] min-w-[96px]">${esc(p)}</th>`).join('')}<th class="text-left min-w-[180px]">Observación (logros y avances)</th></tr></thead><tbody>
+    ${d.estudiantes.map((e, i) => `<tr><td>${i + 1}</td><td style="text-align:left" class="font-semibold">${esc(e.nombres)}${e.valor ? `<div class="text-[9px] text-slate-500">Valoración anterior (única): ${esc(e.valor)}</div>` : ''}</td>
+      ${PR.map((_, k) => { const off = (e.bloq || [])[k]; if (off && ed) bloqueadas++;
+        return `<td><div class="flex items-center gap-1 justify-center"><select id="tp-${i}-${k}" class="inp text-[11px] w-16${off ? ' bloq-ajena' : ''}" ${!ed || off ? 'disabled' : ''}>${opts(LETRAS.slice().reverse().concat(['NE']), (e.params || [])[k] || '', '—')}</select><b id="tn-${i}-${k}" class="text-[11px] w-4"></b></div></td>`; }).join('')}
+      <td><input id="to-${i}" class="inp" value="${esc(e.obs)}" ${ed ? '' : 'disabled'}></td></tr>`).join('')}</tbody></table></div>`;
+  if (bloqueadas) $('pl-area').insertAdjacentHTML('afterbegin', '<div class="aviso-ajenas text-[11px] mb-2 bg-slate-100 border rounded-xl p-2">🔒 Las casillas en gris fueron registradas por otro docente y no se pueden modificar.</div>');
+  const niv = (i, k) => { const l = $('tp-' + i + '-' + k).value, n = nivelAPIc(l), el = $('tn-' + i + '-' + k); el.textContent = n; el.title = NIVEL_TXT[n] || ''; el.className = 'text-[11px] w-4 ' + (n === 'A' ? 'text-emerald-700' : n === 'P' ? 'text-amber-700' : 'text-red-700'); };
+  d.estudiantes.forEach((e, i) => PR.forEach((_, k) => niv(i, k)));
+  $('pl-area').onchange = ev => { const m = String(ev.target.id).match(/^tp-(\d+)-(\d+)$/); if (m) niv(Number(m[1]), Number(m[2])); };
+  $('pl-acciones').innerHTML = ed ? '<button onclick="guardarTrans()" class="btn btn-ok">💾 Guardar proyecto transdisciplinar</button>' : '';
 }
 async function guardarTrans() {
-  const filas = S.pl.data.estudiantes.map((e, i) => ({ id: e.id, valor: $('tv-' + i).value, obs: $('to-' + i).value }));
+  const PR = S.pl.data.parametros || [];
+  const filas = S.pl.data.estudiantes.map((e, i) => ({ id: e.id, params: PR.map((_, k) => $('tp-' + i + '-' + k).value), obs: $('to-' + i).value }));
   let ok = false;
   await run(async () => { const r = await apiT('apiGuardarTrans', S.pl.ctx, $('tr-nom').value, filas); toast(r.mensaje, 'ok'); ok = true; S.sucio = false; });
   if (ok) plCargar();
@@ -2364,7 +2383,7 @@ async function iniConsulta() {
   } catch (e) { toast(e.message, 'err'); }
 }
 async function consultarDocentes(modo) {
-  const f = { jornada: $('cs-jor').value, grado: $('cs-gra').value, paralelo: $('cs-par').value, comision: $('cs-com').value };
+  const f = { jornada: $('cs-jor').value, nivel: $('cs-niv').value, grado: $('cs-gra').value, paralelo: $('cs-par').value, comision: $('cs-com').value, tutor: $('cs-tut').value };
   await run(async () => {
     const r = await apiT('apiReporte', 'docentes', f);
     if (modo === 'imprimir') return mostrarReporte(r);
@@ -2456,6 +2475,7 @@ async function descargarPlanta() {
 }
 function verMalla(v) {
   S.mallaVista = v;
+  if ((S.cat.bloqueos || []).includes('CONSULTA_DOCENTES')) { $('mlb-consulta').classList.add('hidden'); if (v === 'consulta') v = 'docente'; } // v4.25: el Administrador lo permite o no
   ['docente', 'curso', 'planta', 'oferta', 'malla', 'consulta', 'catalogo'].forEach(x => { $('mlv-' + x).classList.toggle('hidden', x !== v); $('mlb-' + x).className = 'btn ' + (x === v ? 'btn-primary' : 'btn-sec'); });
   if (v === 'malla') cargarMalla(); else if (v === 'curso') cargarDistCurso(); else if (v === 'oferta') cargarOferta(); else if (v === 'docente') asgDocente(); else if (v === 'consulta') iniConsulta(); else if (v === 'catalogo') cargarCatalogo();
 }
@@ -3219,36 +3239,36 @@ function califCualC(tipo, vals, manual) {
 // v4.23: Animación a la lectura – el docente ingresa una nota de 0 a 10 y el sistema la convierte en letra (A+ … E-)
 function letraNotaC(n) { if (n === null || n === '' || isNaN(n)) return ''; const r = (S.cat.escala || []).filter(x => x.tipo === 'ELEMENTAL').find(x => n >= x.desde - 1e-9 && n <= x.hasta + 1e-9); return r ? r.codigo : ''; }
 function renderLectura(d) {
-  // v4.24: hasta 6 notas de 0 a 10 por trimestre → promedio simple (dos decimales truncados) → valoración A+ … E-
+  // v4.24: lectura hasta 6 notas · v4.25: optativas hasta 8 → promedio simple (dos decimales truncados) → valoración A+ … E-
   S.pl.data = d; banner(d);
   if (!d.estudiantes.length) return sinEstudiantes();
-  const ed = d.permiso.editable, K = [0, 1, 2, 3, 4, 5];
+  const ed = d.permiso.editable, K = Array.from({ length: d.nNotas || 6 }, (_, k) => k), esOpt = d.tipo === 'OPTATIVA';
   let bloqueadas = 0;
   const rows = d.estudiantes.map((e, i) => {
-    const ns = e.notas && e.notas.length ? e.notas : [e.nota || '', '', '', '', '', ''];
+    const ns = e.notas && e.notas.length ? e.notas : K.map(k => k === 0 ? (e.nota || '') : '');
     const cel = K.map(k => { const off = (e.bloq || []).includes('N' + (k + 1)); if (off && ed) bloqueadas++;
       return `<td><input id="ln-${i}-${k}" class="nota${off ? ' bloq-ajena' : ''}" value="${esc(ns[k])}" ${!ed || off ? 'disabled' : ''} inputmode="decimal"></td>`; }).join('');
     const ant = ns.every(x => x === '' || x == null) && e.calif ? `<div class="text-[9px] text-slate-500">Registrada antes por indicadores: ${esc(e.calif)}</div>` : '';
     return `<tr><td>${i + 1}</td><td class="font-semibold">${esc(e.nombres)}${ant}</td>${cel}<td id="lp-${i}" class="font-bold"></td>
       <td id="lv-${i}" class="font-black text-emerald-800"></td><td><input id="qo-${i}" class="inp" value="${esc(e.obs)}" ${ed ? '' : 'disabled'}></td>${celdaGrab(i, e.fecha)}</tr>`; }).join('');
   $('pl-area').innerHTML = (bloqueadas ? '<div class="aviso-ajenas text-[11px] mb-2 bg-slate-100 border rounded-xl p-2">🔒 Las casillas en gris fueron registradas por otro docente y no se pueden modificar; puede llenar las vacías.</div>' : '') +
-    `<div class="text-[11px] text-slate-600 mb-2 bg-violet-50 border border-violet-200 rounded-xl p-2"><b>Animación a la lectura</b>: registre <b>hasta 6 notas de 0 a 10</b> en el trimestre. Se promedian (promedio simple) y el promedio se convierte en la valoración cualitativa (A+ … E-). En la <b>boleta</b> aparece solo la letra; en los <b>informes de calificaciones</b>, el promedio y la letra. No se promedia con las demás asignaturas ni es requisito de promoción (Art. 9).</div>
+    `<div class="text-[11px] text-slate-600 mb-2 bg-violet-50 border border-violet-200 rounded-xl p-2"><b>${esOpt ? 'Optativa' : 'Animación a la lectura'}</b>: registre <b>hasta ${K.length} notas de 0 a 10</b> en el trimestre. Se promedian (promedio simple) y el promedio se convierte en la valoración cualitativa (A+ … E-). En la <b>boleta</b> aparece solo la letra; en los <b>informes de calificaciones</b>, el promedio y la letra. No se promedia con las demás asignaturas ni es requisito de promoción (Art. 9).</div>
     <div class="overflow-x-auto border rounded-2xl"><table class="w-full planilla"><thead class="bg-violet-50"><tr><th>N°</th><th class="text-left min-w-[160px]">Estudiante</th>${K.map(k => `<th>Nota ${k + 1}</th>`).join('')}<th>Promedio</th><th>Valoración</th><th class="min-w-[180px]">Observación</th><th>Drive</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   $('pl-area').oninput = $('pl-area').onchange = ev => { const m = String(ev.target.id).match(/^ln-(\d+)-\d$/); if (m) recalcLectura(Number(m[1])); };
   d.estudiantes.forEach((e, i) => recalcLectura(i));
-  $('pl-acciones').innerHTML = ed ? '<button onclick="guardarCualitativa()" class="btn btn-primary">💾 Guardar animación a la lectura en Drive</button>' : '';
+  $('pl-acciones').innerHTML = ed ? `<button onclick="guardarCualitativa()" class="btn btn-primary">💾 Guardar ${esOpt ? 'optativa' : 'animación a la lectura'} en Drive</button>` : '';
 }
 function recalcLectura(i) {
   const v = [];
   let bad = false;
-  [0, 1, 2, 3, 4, 5].forEach(k => { const el = $('ln-' + i + '-' + k), t = el.value.trim(), n = t === '' ? null : numC(t), mal = n !== null && (Number.isNaN(n) || n < 0 || n > 10);
+  Array.from({ length: S.pl.data.nNotas || 6 }, (_, k) => k).forEach(k => { const el = $('ln-' + i + '-' + k), t = el.value.trim(), n = t === '' ? null : numC(t), mal = n !== null && (Number.isNaN(n) || n < 0 || n > 10);
     el.classList.toggle('invalida', mal); if (mal) bad = true; else if (n !== null) v.push(n); });
   const e = S.pl.data.estudiantes[i], p = !bad && v.length ? trunc2(v.reduce((a, b) => a + b, 0) / v.length) : null;
   $('lp-' + i).textContent = p === null ? '' : f2(p) + (v.length ? ` (${v.length})` : '');
   $('lv-' + i).textContent = bad ? '' : (p === null ? (e.calif && !(e.notas || []).some(x => x !== '' && x != null) ? e.calif : '') : letraNotaC(p));
 }
 function renderCualitativa(d) {
-  if (d.tipo === 'LECTURA') return renderLectura(d);
+  if (d.nNotas || d.tipo === 'LECTURA') return renderLectura(d); // v4.25: lectura y optativas con notas
   S.pl.data = d; banner(d);
   if (!d.estudiantes.length) return sinEstudiantes();
   const ed = d.permiso.editable, dis = ed ? '' : 'disabled', ind = d.indicadores, tipo = d.tipo;
@@ -3292,11 +3312,11 @@ function recalcCual(i) {
 }
 async function guardarCualitativa() {
   const d = S.pl.data;
-  if (d.tipo === 'LECTURA') { // v4.23
+  if (d.nNotas || d.tipo === 'LECTURA') { // v4.23 / v4.25
     if ($('pl-area').querySelector('.invalida')) return toast('La nota debe estar entre 0 y 10.', 'err');
-    const filasL = d.estudiantes.map((e, i) => ({ id: e.id, notas: [0, 1, 2, 3, 4, 5].map(k => $('ln-' + i + '-' + k).value.trim()), obs: $('qo-' + i).value }));
+    const filasL = d.estudiantes.map((e, i) => ({ id: e.id, notas: Array.from({ length: d.nNotas || 6 }, (_, k) => $('ln-' + i + '-' + k).value.trim()), obs: $('qo-' + i).value }));
     let okL = false;
-    await run(async () => { const r = await apiT('apiGuardarCualitativa', S.pl.ctx, 'LECTURA', filasL); toast(r.mensaje, 'ok'); okL = true; S.sucio = false; });
+    await run(async () => { const r = await apiT('apiGuardarCualitativa', S.pl.ctx, d.tipo, filasL); toast(r.mensaje, 'ok'); okL = true; S.sucio = false; });
     if (okL) plCargar();
     return;
   }
@@ -3344,29 +3364,43 @@ function marcarSucio(ev) {
 
 // ---- Insumos formativos (9 por corte + refuerzo) ----
 const qf = (i, k, t) => $('pl-area').querySelector(`[data-i="${i}"][data-k="${k}"][data-t="${t}"]`);
+const COLOR_CORTE = ['#e0f2fe', '#dcfce7', '#fef9c3', '#fce7f3', '#ede9fe', '#ffedd5']; // v4.25: un color por corte
+const colorCorte = n => COLOR_CORTE[(Math.max(1, n) - 1) % COLOR_CORTE.length];
 function renderFormativa(d) {
   S.pl.data = d; banner(d);
   if (!d.estudiantes.length) return sinEstudiantes();
   const NI = S.cat.nInsumos, ed = d.permiso.editable, dis = ed ? '' : 'disabled', P = S.cat.params;
   const edR = ed || (d.permisoRef && d.permisoRef.editable), disR = edR ? '' : 'disabled';
   S.pl.edR = edR;
-  let th = '<tr><th>N°</th><th class="text-left min-w-[170px]">Estudiante</th>';
-  for (let k = 1; k <= NI; k++) th += `<th>I${k}</th>`;
-  th += '<th>Total insumos</th><th>Prom. sin refuerzo</th><th>Prom. formativo del corte</th><th>Equivalencia</th><th>% bajos</th><th>Alerta</th><th>Padres</th><th>Drive</th></tr>';
+  // v4.25: máximo de insumos del corte (Rectorado) y los demás cortes del trimestre en la misma sábana, cada uno con su color
+  const MI = d.maxIns || NI, CS = d.cortes || [], act = CS.find(c => c.actual) || { orden: 1, nombre: '' }, cAct = colorCorte(act.orden);
+  const antes = CS.filter(c => !c.actual && c.orden < act.orden), despues = CS.filter(c => !c.actual && c.orden > act.orden);
+  const thOtro = c => { let h = ''; for (let k = 1; k <= c.maxIns; k++) h += `<th style="background:${colorCorte(c.orden)}">I${k}</th>`; return h + `<th style="background:${colorCorte(c.orden)}">Prom.</th>`; };
+  const tdOtro = (c, e) => { const x = (d.otros || {})[c.id] && d.otros[c.id][e.id], bg = `background:${colorCorte(c.orden)}`; let h = '';
+    for (let k = 0; k < c.maxIns; k++) { const it = x && x.ins[k]; const fv = it ? numC(String(it.f)) : null, rv = it ? numC(String(it.r)) : null;
+      h += `<td style="${bg}" class="text-[11px]">${fv === null || Number.isNaN(fv) ? '' : (rv !== null && !Number.isNaN(rv) ? `${f2(fv)}<br><b>→${f2(efectivoC(fv, rv))}</b>` : f2(fv))}</td>`; }
+    return h + `<td style="${bg}" class="font-bold text-[11px]">${x ? (x.refFinal !== '' ? f2(x.refFinal) + '<sup>R</sup>' : f2(x.prom)) : ''}</td>`; };
+  let th = `<tr><th colspan="2"></th>${antes.map(c => `<th colspan="${c.maxIns + 1}" style="background:${colorCorte(c.orden)}">${esc(c.nombre)} <small>(${esc(c.estado || '')}, solo ver)</small></th>`).join('')}
+    <th colspan="${MI + 6}" style="background:${cAct}">${esc(act.nombre || d.periodo.nombre)} <small>(se edita aquí)</small></th>${despues.map(c => `<th colspan="${c.maxIns + 1}" style="background:${colorCorte(c.orden)}">${esc(c.nombre)} <small>(${esc(c.estado || '')})</small></th>`).join('')}<th colspan="3"></th></tr>`;
+  th += '<tr><th>N°</th><th class="text-left min-w-[170px]">Estudiante</th>' + antes.map(thOtro).join('');
+  for (let k = 1; k <= NI; k++) th += `<th style="background:${cAct}${k > MI ? ';display:none' : ''}">I${k}</th>`;
+  th += `<th style="background:${cAct}">Total insumos</th><th style="background:${cAct}">Prom. sin refuerzo</th><th style="background:${cAct}">Prom. formativo del corte</th><th style="background:${cAct}">Equivalencia</th><th style="background:${cAct}">% bajos</th><th style="background:${cAct}">Alerta</th>` +
+    despues.map(thOtro).join('') + '<th>Prom. insumos del trimestre (guardado)</th><th>Padres</th><th>Drive</th></tr>';
+  const nCols = 2 + antes.concat(despues).reduce((a, c) => a + c.maxIns + 1, 0) + NI + 9;
   let rows = '';
   d.estudiantes.forEach((e, i) => {
     let cells = '';
     e.insumos.forEach((it, k) => {
       const conR = it.r !== '' && it.r != null;
-      cells += `<td class="align-top"><input class="nota" data-i="${i}" data-k="${k}" data-t="f" value="${esc(it.f)}" ${dis} inputmode="decimal">
+      cells += `<td class="align-top" style="background:${cAct}${k >= MI ? ';display:none' : ''}"><input class="nota" data-i="${i}" data-k="${k}" data-t="f" value="${esc(it.f)}" ${dis} inputmode="decimal">
         <label class="lblref hidden" data-lbl="${i}-${k}" title="Refuerzo del insumo: (anterior + nueva) / 2, truncado"><input type="checkbox" data-i="${i}" data-k="${k}" data-t="chk" ${conR ? 'checked' : ''} ${disR}>Ref.</label>
         <input class="nota ref ${conR ? '' : 'hidden'}" data-i="${i}" data-k="${k}" data-t="r" value="${esc(it.r)}" placeholder="R" ${disR} inputmode="decimal"></td>`;
     });
     const c = e.com || {};
-    rows += `<tr data-row="${i}"><td>${i + 1}</td><td class="font-semibold">${esc(e.nombres)}</td>${cells}
-      <td id="tot-${i}" class="font-bold"></td><td id="pin-${i}" class="font-bold"></td><td id="pro-${i}" class="font-bold"></td><td id="eq-${i}" class="text-[10px] font-bold text-sky-900"></td><td id="pct-${i}"></td><td id="al-${i}"></td>
+    rows += `<tr data-row="${i}"><td>${i + 1}</td><td class="font-semibold">${esc(e.nombres)}</td>${antes.map(c => tdOtro(c, e)).join('')}${cells}
+      <td id="tot-${i}" class="font-bold"></td><td id="pin-${i}" class="font-bold"></td><td id="pro-${i}" class="font-bold"></td><td id="eq-${i}" class="text-[10px] font-bold text-sky-900"></td><td id="pct-${i}"></td><td id="al-${i}"></td>${despues.map(c => tdOtro(c, e)).join('')}<td class="font-black">${f2(e.promTrim)}</td>
       <td><button type="button" id="bc-${i}" onclick="$('com-${i}').classList.toggle('hidden')" class="btn btn-sec py-1">${c.informado ? '✅' : '📞'}</button></td>${celdaGrab(i, e.fecha)}</tr>
-      <tr id="com-${i}" class="hidden bg-sky-50"><td></td><td colspan="${NI + 9}" style="text-align:left">
+      <tr id="com-${i}" class="hidden bg-sky-50"><td></td><td colspan="${nCols}" style="text-align:left">
         <div class="flex flex-wrap gap-2 items-end text-xs py-1">
           <label class="font-bold flex items-center gap-1"><input type="checkbox" id="ci-${i}" ${c.informado ? 'checked' : ''}> Representante informado</label>
           <div><span class="lbl">Nombre de quien recibió la información</span><input id="cn-${i}" class="inp" value="${esc(c.nombre || e.representante || '')}"></div>
@@ -3378,7 +3412,8 @@ function renderFormativa(d) {
   $('pl-area').innerHTML = `<div class="text-[11px] text-slate-600 mb-2 bg-slate-50 border rounded-xl p-2 space-y-0.5">
       <div><b>1. Refuerzo del insumo formativo:</b> la casilla <b>Ref.</b> aparece en insumos menores a ${f2(P.notaMin)}. La nota del insumo = (calificación anterior + nueva) / 2, <b>truncada</b>. Ese resultado entra al promedio formativo.</div>
       <div><b>2. Alerta temprana (Art. 10):</b> se genera con las calificaciones ya reforzadas: ${esc(critTxtG(P, S.pl.ctx.grado))}. Informe al representante con 📞.</div>
-      <div><b>3. Refuerzo pedagógico por la alerta:</b> se registra en la pestaña <b>🩹 Refuerzo pedagógico</b> (promedio con los aportes, hasta ${f2(P.topeRef)}, Art. 10 num. 4).</div></div>
+      <div><b>3. Refuerzo pedagógico por la alerta:</b> se registra en la pestaña <b>🩹 Refuerzo pedagógico</b> (promedio con los aportes, hasta ${f2(P.topeRef)}, Art. 10 num. 4).</div>
+      <div><b>4. Sábana del trimestre:</b> cada corte tiene su color; los otros cortes se ven y no se modifican aquí (para editarlos elija ese corte). Este corte admite hasta <b>${MI}</b> insumo(s) (lo define Rectorado). <sup>R</sup> = promedio con refuerzo pedagógico.</div></div>
     <div class="overflow-x-auto border rounded-2xl"><table class="w-full planilla"><thead class="bg-slate-100">${th}</thead><tbody>${rows}</tbody></table></div>`;
   $('pl-area').oninput = $('pl-area').onchange = ev => {
     const t = ev.target; if (!t.dataset || t.dataset.i === undefined) return;
@@ -3388,7 +3423,12 @@ function renderFormativa(d) {
   d.estudiantes.forEach((e, i) => recalcForm(i));
   $('pl-acciones').innerHTML = (ed ? '<button onclick="guardarFormativa()" class="btn btn-primary">💾 Guardar calificaciones en Drive</button>'
       : (edR ? '<button onclick="guardarFormativa()" class="btn btn-primary">🔁 Guardar refuerzos en Drive</button>' : ''))
-    + '<button onclick="guardarComunicaciones()" class="btn btn-sec">📞 Guardar comunicación a representantes</button>';
+    + '<button onclick="guardarComunicaciones()" class="btn btn-sec">📞 Guardar comunicación a representantes</button>'
+    + '<button onclick="genSabana()" class="btn btn-sec">🖨️ Sábana del trimestre</button>';
+}
+async function genSabana(f) { // v4.25
+  const c = f || S.pl.ctx, t = (S.pl.data && S.pl.data.periodo && S.pl.data.periodo.trimestre) || c.trimestre;
+  await run(async () => mostrarReporte(await apiT('apiReporte', 'sabana', { jornada: c.jornada, grado: c.grado, paralelo: c.paralelo, asignatura: c.asignatura, trimestre: t })));
 }
 function recalcForm(i) {
   const NI = S.cat.nInsumos, P = S.cat.params, ef = [], ini = [];
@@ -3741,6 +3781,22 @@ function mostrarReporte(r) {
       tabla(['N°', 'Estudiante', 'Curso', 'Asignatura', 'Trim.', 'Tipo', 'Nota inicial', 'Solicitado por', 'Autorizado por', 'Estado', 'Evaluación', 'Nota mejorada'],
         r.filas.map((m, n) => `<tr><td class="c">${n + 1}</td><td>${esc(m.estudiante)}</td><td>${esc(m.grado + ' ' + m.paralelo + ' ' + m.jornada)}</td><td>${esc(m.asignatura)}</td><td class="c">${esc(m.trimestre)}</td><td>${m.tipo === 'DIRECTA' ? 'Directa' : 'Con refuerzo'}</td><td class="c">${f2(m.notaInicial)}</td><td>${esc(m.solicitadoPor + ' (' + m.parentesco + ') ' + m.fechaSolicitud)}</td><td>${esc(m.autorizadoPor + ' ' + m.fechaAutorizacion)}</td><td>${esc(m.estado)}</td><td class="c">${f2(m.notaEvaluacion)}</td><td class="c b">${f2(m.notaMejorada)}</td></tr>`)) +
       firmas([[r.inst.rectora, 'Rectora']]);
+  } else if (r.tipo === 'sabana') {
+    // v4.25: SÁBANA DEL TRIMESTRE – un color por corte
+    orient = 'landscape';
+    const F = r.filtros, conS = !r.sinSumativa, nP = r.piloto ? 'Proyecto' : 'Sumativa';
+    const g1 = `<tr><th colspan="2"></th>${r.cortes.map(c => `<th colspan="${c.n + 1}" style="background:${colorCorte(c.orden)}">${esc(c.nombre)}</th>`).join('')}<th colspan="${conS ? 6 : 2}">Trimestre</th></tr>`;
+    const g2 = `<tr><th>N°</th><th>Estudiante</th>${r.cortes.map(c => { let h = ''; for (let k = 1; k <= c.n; k++) h += `<th style="background:${colorCorte(c.orden)}">I${k}</th>`; return h + `<th style="background:${colorCorte(c.orden)}">Prom.</th>`; }).join('')}
+      <th>Prom. insumos</th>${conS ? `<th>${r.pf} %</th><th>${nP}</th><th>${r.ps} %</th>` : ''}<th>Nota trimestral</th>${conS ? '<th>Equiv.</th>' : ''}</tr>`;
+    const filas = r.filas.map((x, n) => `<tr><td class="c">${n + 1}</td><td>${esc(x.nombres)}</td>${x.cortes.map((c, k) => { const bg = `background:${colorCorte(r.cortes[k].orden)}`;
+      return c.ins.map(it => `<td class="c" style="${bg}${it.f !== '' && it.f < r.notaMin ? ';color:#b91c1c' : ''}">${it.f === '' ? '' : (it.r !== '' ? f2(it.f) + '→' + f2(it.ef) : f2(it.f))}</td>`).join('') +
+        `<td class="c b" style="${bg}">${c.refFinal !== '' ? f2(c.refFinal) + '<sup>R</sup>' : f2(c.prom)}${c.alerta ? ' ⚠' : ''}</td>`; }).join('')}
+      <td class="c b">${f2(x.promF)}</td>${conS ? `<td class="c">${f2(x.pF)}</td><td class="c">${f2(x.sum)}${x.mejora ? '<sup>M</sup>' : ''}</td><td class="c">${f2(x.pS)}</td>` : ''}<td class="c b">${f2(x.nota)}</td>${conS ? `<td class="c">${esc(x.equiv)}</td>` : ''}</tr>`);
+    h = encabezado(r, 'Sábana de calificaciones del trimestre', `${r.trimestre}° trimestre – ${esc(r.asignatura)}`) +
+      ficha([['Asignatura', r.asignatura], ['Año / curso', F.grado], ['Paralelo', F.paralelo], ['Jornada', F.jornada], ['Docente', r.docente], ['Trimestre', r.trimestre + '°']]) +
+      `<table style="font-size:.86em"><thead>${g1}${g2}</thead><tbody>${filas.join('') || '<tr><td class="c" colspan="40">Sin estudiantes.</td></tr>'}</tbody></table>
+      <p style="font-size:9px;margin-top:3px">Cada corte con su color. "8,00→7,00" = insumo con refuerzo (nota anterior → nota reforzada). <sup>R</sup> promedio con refuerzo pedagógico · ⚠ alerta temprana · <sup>M</sup> con mejora.${conS ? ` Nota trimestral = ${r.pf} % promedio de insumos + ${r.ps} % ${nP.toLowerCase()}.` : ''}</p>` +
+      firmas([[r.docente, 'Docente de asignatura', 'REALIZADO'], vice(r)]) + norma(r);
   } else if (r.tipo === 'historial') {
     orient = 'landscape';
     h = encabezado(r, 'Historial de calificaciones', 'Cambios y correcciones autorizadas de calificaciones registradas') +
@@ -3751,7 +3807,7 @@ function mostrarReporte(r) {
     orient = 'landscape';
     const filas = r.filas.map((x, n) => `<tr><td class="c">${n + 1}</td><td>${esc(x.docente)}</td><td>${esc(x.cedula)}</td><td>${esc(x.jornada)}</td><td>${esc(x.tutor)}</td>
       <td style="font-size:.9em">${x.clases.map(esc).join('<br>') || '—'}</td><td style="font-size:.9em">${x.comisiones.map(esc).join('<br>') || '—'}</td><td class="c b">${x.total}</td></tr>`);
-    const filtro = [F.jornada === 'Ambas' ? 'Todas las jornadas' : 'Jornada ' + F.jornada, F.grado || '', F.paralelo ? 'Paralelo ' + F.paralelo : '', F.comision === '__TODAS__' ? 'Docentes con comisión' : (F.comision ? 'Comisión: ' + F.comision : '')].filter(Boolean).join(' · ');
+    const filtro = [F.jornada === 'Ambas' ? 'Todas las jornadas' : 'Jornada ' + F.jornada, F.nivel ? 'Nivel ' + F.nivel : '', F.grado || '', F.paralelo ? 'Paralelo ' + F.paralelo : '', F.tutor === 'SI' ? 'Solo tutores' : (F.tutor === 'NO' ? 'Solo no tutores' : ''), F.comision === '__TODAS__' ? 'Docentes con comisión' : (F.comision ? 'Comisión: ' + F.comision : '')].filter(Boolean).join(' · ');
     h = encabezado(r, 'Consulta de docentes', esc(filtro)) + ficha([['Filtro', filtro], ['Docentes', r.filas.length]]) +
       tabla(['N°', 'Docente', 'Cédula', 'Jornada', 'Tutoría', 'Clases (curso · asignatura)', 'Comisiones', 'Carga horaria'], filas) +
       firmas([[r.vicerrector || '', 'Vicerrector/a – Jornada ' + F.jornada, 'ELABORADO'], [r.inst.rectora, 'Rectora', 'APROBADO']]) + norma(r);
@@ -3793,14 +3849,14 @@ function mostrarReporte(r) {
     // v4.10: informe del curso con todas las asignaturas (Vicerrectorado / Rectorado)
     orient = 'landscape';
     const A = r.asignaturas, nv = r.niveles, cod = (x, c) => r.cualitativa ? (c || '') : f2(x);
-    const filas = r.filas.map((x, n) => `<tr><td class="c">${n + 1}</td><td>${esc(x.nombres)}</td>${x.notas.map((v, i) => `<td class="c ${v !== '' && nivelDe(nv, x.cods[i]) >= nv.length - 2 && !r.cualitativa && v < r.params.notaMin ? 'alerta' : ''}">${v === '' ? '—' : cod(v, x.cods[i])}</td>`).join('')}<td class="c b">${x.prom === '' ? '—' : cod(x.prom, x.promCod)}</td>${r.lectura ? `<td class="c">${esc(x.lectura || '—')}</td>` : ''}</tr>`);
-    filas.push(`<tr><td colspan="2" class="b c">PROMEDIO DE LA ASIGNATURA</td>${A.map((a, i) => { const p = promedio(r.filas.map(x => x.notas[i])); return `<td class="c b">${p === '' ? '—' : f2(p)}</td>`; }).join('')}<td class="c b">${f2(promedio(r.filas.map(x => x.prom)))}</td>${r.lectura ? '<td></td>' : ''}</tr>`);
+    const filas = r.filas.map((x, n) => `<tr><td class="c">${n + 1}</td><td>${esc(x.nombres)}</td>${x.notas.map((v, i) => `<td class="c ${v !== '' && nivelDe(nv, x.cods[i]) >= nv.length - 2 && !r.cualitativa && v < r.params.notaMin ? 'alerta' : ''}">${v === '' ? '—' : cod(v, x.cods[i])}</td>`).join('')}<td class="c b">${x.prom === '' ? '—' : cod(x.prom, x.promCod)}</td>${r.lectura ? `<td class="c">${esc(x.lectura || '—')}</td>` : ''}${r.conOptativa ? `<td style="font-size:.9em">${esc(x.optativa || '—')}</td>` : ''}</tr>`);
+    filas.push(`<tr><td colspan="2" class="b c">PROMEDIO DE LA ASIGNATURA</td>${A.map((a, i) => { const p = promedio(r.filas.map(x => x.notas[i])); return `<td class="c b">${p === '' ? '—' : f2(p)}</td>`; }).join('')}<td class="c b">${f2(promedio(r.filas.map(x => x.prom)))}</td>${r.lectura ? '<td></td>' : ''}${r.conOptativa ? '<td></td>' : ''}</tr>`);
     const porAsig = A.map((a, i) => ({ nombre: a, conteo: contar(nv, r.filas.map(x => x.cods[i])), prom: promedio(r.filas.map(x => x.notas[i])) }));
     const tab = `<table><thead><tr><th style="text-align:left">Asignatura</th><th>Promedio</th>${nv.map(n => `<th>${esc(n.codigo === 'ALC' ? 'Alcanzado' : n.codigo === 'PRO' ? 'En proceso' : n.codigo === 'INI' ? 'Iniciado' : n.codigo)}</th>`).join('')}<th>Con nota</th><th>% en los niveles más bajos</th></tr></thead><tbody>
       ${porAsig.map(p => { const t = p.conteo.reduce((a, b) => a + b, 0), bajos = p.conteo.slice(-2).reduce((a, b) => a + b, 0); return `<tr class="${t && bajos / t >= 0.3 ? 'alerta' : ''}"><td>${esc(p.nombre)}</td><td class="c b">${p.prom === '' ? '—' : f2(p.prom)}</td>${p.conteo.map(c => `<td class="c">${c}</td>`).join('')}<td class="c">${t}</td><td class="c">${t ? (bajos * 100 / t).toFixed(1) + '%' : '—'}</td></tr>`; }).join('')}</tbody></table>`;
     h = encabezado(r, `Calificaciones del curso – todas las asignaturas`, r.periodoTxt) +
       ficha([['Jornada', F.jornada], ['Curso', curso], ['Docente tutor/a', r.tutor], ['Estudiantes', r.filas.length]]) +
-      tabla(['N°', 'Estudiante'].concat(A, ['Promedio'], r.lectura ? ['Animación a la lectura (nota y valoración; no se promedia)'] : []), filas) +
+      tabla(['N°', 'Estudiante'].concat(A, ['Promedio'], r.lectura ? ['Animación a la lectura (nota y valoración; no se promedia)'] : [], r.conOptativa ? ['Optativa (nota y valoración; no se promedia)'] : []), filas) +
       `<div class="sec" style="margin-top:8px">Tabulación por asignatura – nivel de logro</div>` + tab +
       `<div class="graf">${svgApilado(nv, porAsig, 'Nivel de logro por asignatura', 560)}${svgPromedios(porAsig.map(p => ({ nombre: p.nombre, valor: p.prom })), 'Promedio por asignatura', Math.max(300, 46 * A.length), 210, r.params.notaMin)}</div>` +
       `<div style="font-size:9px;margin-top:3px">Las filas resaltadas son asignaturas con 30 % o más de estudiantes en los dos niveles más bajos.</div>` +
@@ -3817,11 +3873,12 @@ function mostrarReporte(r) {
     orient = 'landscape';
     const nom = { AIA: 'Cívica y Acompañamiento Integral en el Aula', OVP: 'Orientación Vocacional y Profesional', LECTURA: 'Animación a la lectura', OPTATIVA: r.asignatura }[r.tipoCual];
     const escTxt = r.tipoCual === 'OPTATIVA' ? 'Escala A+ … E- (Art. 7 y 9)' : (r.tipoCual === 'OVP' ? 'S Siempre = 3 · F Frecuentemente = 2 · O Ocasionalmente = 1 · Nota final (suma): 14–15 A+, 10–13 A-, 0–9 B+' : 'S Siempre · F Frecuentemente · O Ocasionalmente · N Nunca');
-    const lecN = r.tipoCual === 'LECTURA' && r.filas.some(x => x.nota !== '' && x.nota != null); // v4.23/4.24: notas, promedio y letra
+    const lecN = (r.tipoCual === 'LECTURA' || r.tipoCual === 'OPTATIVA') && r.filas.some(x => x.nota !== '' && x.nota != null); // v4.23-4.25: notas, promedio y letra
+    const nN = lecN ? Math.max(...r.filas.map(x => (x.notas || []).length), 1) : 0;
     const filas = r.filas.map((x, n) => `<tr><td class="c">${n + 1}</td><td>${esc(x.nombres)}</td>${lecN ? (x.notas || []).map(v => `<td class="c">${v === '' || v == null ? '—' : f2(v)}</td>`).join('') + `<td class="c b">${x.nota === '' || x.nota == null ? '—' : f2(x.nota)}</td>` : ''}${(lecN ? [] : x.valores).map(v => `<td class="c">${esc(v || '—')}</td>`).join('')}${r.tipoCual === 'OPTATIVA' || lecN ? '' : `<td class="c">${esc(x.suma)}</td>`}<td class="c b">${esc(x.calif || '—')}</td><td>${esc(x.desc)}</td><td>${esc(x.obs)}</td></tr>`);
     h = encabezado(r, `${nom} – ${F.trimestre}° trimestre`, 'Evaluación cualitativa: no se promedia y no es requisito de promoción (Art. 9 del Acuerdo 82-A)') +
       ficha([['Jornada', F.jornada], ['Curso', curso], ['Docente', r.docente], r.eje ? ['Eje', r.eje] : null, ['Escala', escTxt]]) +
-      tabla(['N°', 'Estudiante'].concat(lecN ? ['Nota 1', 'Nota 2', 'Nota 3', 'Nota 4', 'Nota 5', 'Nota 6', 'Promedio'] : r.indicadores.map((t, k) => `${k + 1}. ${esc(t)}`), r.tipoCual === 'OPTATIVA' || lecN ? [] : ['Suma'], ['Valoración', 'Descripción', 'Observación']), filas) +
+      tabla(['N°', 'Estudiante'].concat(lecN ? Array.from({ length: nN }, (_, k) => 'Nota ' + (k + 1)).concat(['Promedio']) : r.indicadores.map((t, k) => `${k + 1}. ${esc(t)}`), r.tipoCual === 'OPTATIVA' || lecN ? [] : ['Suma'], ['Valoración', 'Descripción', 'Observación']), filas) +
       (r.obsGeneral ? `<table><tr><th style="width:22%">Observación general</th><td>${esc(r.obsGeneral)}</td></tr></table>` : '') +
       firmas([[r.docente, r.rolDocente || 'Docente', 'REALIZADO'], vice(r)]) + norma(r);
   } else if (r.tipo === 'boleta') {
@@ -3864,7 +3921,9 @@ function mostrarReporte(r) {
         ${c.obs ? `<tr><td colspan="4"><b>Observación:</b> ${esc(c.obs)}</td></tr>` : ''}</tbody></table>`).join('');
       return `<div class="pagina">${encabezado(r, `Informe cualitativo de desarrollo – ${F.trimestre}° trimestre`, 'Educación Inicial y Preparatoria')}
         ${ficha([['Estudiante', fi.nombres], ['Cédula', fi.cedula], ['Curso', curso], ['Jornada', F.jornada], ['Docente tutor/a', r.tutor]])}
-        ${bloques}${fi.trans ? `<table><thead><tr><th colspan="2" style="text-align:left">PROYECTO TRANSDISCIPLINAR${fi.trans.nombre ? ': ' + esc(fi.trans.nombre) : ''}</th></tr></thead><tbody><tr><td style="width:30%" class="b">Valoración</td><td>${fi.trans.valor ? esc(fi.trans.valor + ' – ' + (bandaL(fi.trans.valor) || '')) : '—'}</td></tr>${fi.trans.obs ? `<tr><td class="b">Observación</td><td>${esc(fi.trans.obs)}</td></tr>` : ''}</tbody></table>` : ''}<p style="font-size:10px;margin-top:6px"><b>Escala (Art. 7 y 35):</b> A+ A- B+ B- destreza alcanzada · C+ C- en proceso de desarrollo · D+ D- E+ E- iniciada · NE no estudiada en el periodo. Promoción automática (Art. 20).</p>
+        ${bloques}${fi.trans ? `<table><thead><tr><th colspan="2" style="text-align:left">PROYECTO TRANSDISCIPLINAR${fi.trans.nombre ? ': ' + esc(fi.trans.nombre) : ''}</th></tr></thead><tbody>${(fi.trans.parametros || []).some(x => x.valor)
+          ? fi.trans.parametros.map(x => `<tr><td style="width:40%" class="b">${esc(x.parametro)}</td><td>${x.valor ? esc(x.valor + ' – ' + (NIVEL_TXT[x.nivel] ? 'Aprendizaje ' + NIVEL_TXT[x.nivel].toLowerCase() : '')) : '—'}</td></tr>`).join('')
+          : `<tr><td style="width:30%" class="b">Valoración</td><td>${fi.trans.valor ? esc(fi.trans.valor + ' – ' + (bandaL(fi.trans.valor) || '')) : '—'}</td></tr>`}${fi.trans.obs ? `<tr><td class="b">Observación</td><td>${esc(fi.trans.obs)}</td></tr>` : ''}</tbody></table>` : ''}<p style="font-size:10px;margin-top:6px"><b>Escala (Art. 7 y 35):</b> A+ A- B+ B- destreza alcanzada · C+ C- en proceso de desarrollo · D+ D- E+ E- iniciada · NE no estudiada en el periodo. Promoción automática (Art. 20).</p>
         ${firmas([[r.inst.rectora, 'Rectora'], [r.tutor, 'Docente tutor/a']])}${norma(r)}</div>`;
     }).join('') || '<p>No hay estudiantes.</p>';
   } else if (r.tipo === 'seguimiento') {
