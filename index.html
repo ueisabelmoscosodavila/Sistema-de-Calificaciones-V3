@@ -103,6 +103,32 @@
       .no-print{display:none!important}
     }
     .bloq-ajena { background: #e5e7eb !important; color: #475569 !important; cursor: not-allowed; }
+  /* v4.26: encabezados fijos, columna del estudiante fija, barra de grabar arriba, cambios sin grabar */
+  #pl-area .overflow-x-auto { max-height: 68vh; overflow: auto; }
+  #pl-area table.planilla thead { position: sticky; top: 0; z-index: 4; }
+  #pl-area table.planilla thead tr { background: #f1f5f9; }
+  #pl-area table.planilla { border-spacing: 0; }
+  #pl-area table.planilla thead th { background-color: #f1f5f9; background-clip: padding-box; }
+  #pl-area table.planilla tbody tr:not([id^="com-"]) > td:nth-child(2), #pl-area table.planilla thead tr:last-child > th:nth-child(2) { position: sticky; left: 0; z-index: 2; background: #fff; box-shadow: 2px 0 0 #e2e8f0; }
+  #pl-area table.planilla thead tr:last-child > th:nth-child(2) { z-index: 5; background: #f1f5f9; }
+  #pl-barra { position: sticky; top: 0; z-index: 20; background: #fff; padding: 6px 0; border-bottom: 1px solid #e2e8f0; }
+  #pl-avisos { display: none; }
+  .cambiado { background: #fef9c3 !important; outline: 1px solid #f59e0b; }
+  @keyframes parpadeo { 50% { box-shadow: 0 0 0 4px rgba(239,68,68,.45); } }
+  .parpadea { animation: parpadeo 1.2s infinite; }
+  .sin-reset .reset-clave { display: none !important; }
+  #dm-menu { display: flex !important; flex-direction: row !important; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .dm-grupo { position: relative; display: inline-block; }
+  .dm-panel { display: flex; flex-direction: column; }
+  .dm-panel.hidden { display: none !important; }
+  .dm-btn { color: #fff; font-weight: 800; font-size: 12px; padding: 7px 12px; border-radius: 12px; border: 0; white-space: nowrap; cursor: pointer; }
+  .dm-panel { position: absolute; top: 110%; left: 0; min-width: 240px; background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; box-shadow: 0 10px 30px rgba(15,23,42,.18); padding: 6px; z-index: 50; }
+  .dm-item { display: block; width: 100%; text-align: left; padding: 7px 10px; border-radius: 10px; font-size: 12px; border: 0; background: transparent; cursor: pointer; white-space: nowrap; }
+  .dm-item:hover { background: #f1f5f9; }
+  details.ayuda > summary { list-style: none; }
+  .cr-mes { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+  .cr-dia { min-height: 84px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 3px; font-size: 10px; background: #fff; overflow: hidden; }
+  .cr-act { display: block; width: 100%; text-align: left; border-radius: 5px; padding: 1px 4px; margin-top: 2px; color: #0f172a; font-size: 10px; line-height: 1.2; }
 </style>
   <style id="page-size">@page{size:A4 portrait;margin:10mm}</style>
 </head>
@@ -123,6 +149,7 @@
         <span id="b-nombre" class="font-black text-slate-900 block text-sm"></span>
         <span id="b-rol" class="text-[11px] text-sky-800 font-bold uppercase"></span>
       </div>
+      <button id="b-pend" onclick="verPendientes()" class="btn btn-sec hidden" title="Sus pendientes">🔔 <span id="b-pend-n" class="font-black"></span></button>
       <button onclick="abrirModal('m-clave')" class="btn btn-sec">🔑 Clave</button>
       <button id="b-cambiarol" onclick="abrirRoles()" class="btn bg-violet-50 text-violet-800 border border-violet-200 hidden">🔄 Cambiar rol</button>
       <button onclick="salir()" class="btn bg-red-50 text-red-700 border border-red-200">Salir</button>
@@ -251,6 +278,48 @@
           <th>Fecha</th><th>Docente</th><th>Periodo</th><th>Curso</th><th>Asignatura</th><th>Vigente hasta</th><th>Observación</th><th>Autorizó</th>
         </tr></thead><tbody id="ds-body"></tbody></table></div>
       </div>
+      <div class="card space-y-2 solo-rectora">
+        <div><h3 class="font-black text-sm">🔓 Apertura general (sin cambiar las fechas)</h3>
+          <p class="text-[11px] text-slate-500">Habilita un corte o un trimestre para <b>todos los docentes</b> (también un trimestre cerrado tras la junta). El docente solo ve <i>"Habilitado hasta …"</i>; el motivo y quién autorizó quedan en este registro, que ve solo Rectorado.</p></div>
+        <div class="grid grid-cols-2 sm:grid-cols-6 gap-2 items-end text-xs">
+          <div class="col-span-2"><label class="lbl">Corte o trimestre</label><select id="ap-per" class="inp"></select></div>
+          <div><label class="lbl">Jornada</label><select id="ap-jor" class="inp"><option>Ambas</option><option>Matutina</option><option>Vespertina</option></select></div>
+          <div><label class="lbl">Vigente hasta</label><input id="ap-hasta" type="date" class="inp"></div>
+          <div class="col-span-2"><label class="lbl">Motivo (solo Rectorado)</label><input id="ap-mot" class="inp" placeholder="Ej.: ampliación por feriado"></div>
+          <div class="col-span-2 sm:col-span-5"><label class="lbl">Cursos (vacío = todos)</label><div id="ap-gra" class="flex flex-wrap gap-x-3 gap-y-1"></div></div>
+          <button onclick="guardarApertura()" class="btn btn-ok">🔓 Habilitar</button>
+        </div>
+        <div class="flex justify-end"><button onclick="imprimirAperturas()" class="btn btn-sec py-1">🖨️ Imprimir registro</button></div>
+        <div id="ap-lista" class="text-xs"></div>
+      </div>
+    </div>
+
+    <!-- CRONOGRAMA ESCOLAR (v4.26: vinculado a la hoja de su otro sistema, solo lectura) -->
+    <div id="tab-crono" class="tab hidden space-y-3">
+      <div class="card space-y-2">
+        <div class="flex flex-wrap justify-between items-center gap-2">
+          <div><h3 class="font-black text-sm">📅 Cronograma escolar</h3><p class="text-[11px] text-slate-500" id="cr-info">Se toma del sistema del cronograma (solo lectura).</p></div>
+          <div class="flex flex-wrap gap-1 items-center">
+            <button onclick="crVista('mes')" id="cr-b-mes" class="btn btn-sec py-1">Mes</button><button onclick="crVista('tri')" id="cr-b-tri" class="btn btn-sec py-1">Trimestre</button><button onclick="crVista('sem')" id="cr-b-sem" class="btn btn-sec py-1">Semana</button>
+            <button onclick="crMover(-1)" class="btn btn-sec py-1">◀</button><button onclick="crHoy()" class="btn btn-sec py-1">Hoy</button><button onclick="crMover(1)" class="btn btn-sec py-1">▶</button>
+            <select id="cr-area" class="inp w-auto py-1" onchange="crPintar()"><option value="">Todas las áreas</option></select>
+            <select id="cr-per" class="inp w-auto py-1 hidden" onchange="crPintar()"></select>
+            <button onclick="crImprimir()" class="btn btn-sec py-1">🖨️</button><button onclick="crExcel()" class="btn btn-ok py-1">⬇️ Excel</button>
+            <button onclick="crCorreo()" id="cr-b-mail" class="btn btn-warn py-1 hidden">✉️ Enviar por correo</button>
+            <button onclick="cargarCrono(true)" class="btn btn-sec py-1" title="Volver a leer">🔄</button>
+          </div>
+        </div>
+        <div id="cr-ley" class="flex flex-wrap gap-2 text-[10px]"></div>
+        <div id="cr-tit" class="font-black text-sm text-center"></div>
+        <div id="cr-area-v"></div>
+      </div>
+    </div>
+
+    <!-- PLANIFICACIONES (coordinadores de área / subnivel) -->
+    <div id="tab-planif" class="tab hidden space-y-3">
+      <div class="card space-y-1"><h3 class="font-black text-sm">📤 Subir planificaciones</h3>
+        <p class="text-[11px] text-slate-500">Aparecen solo los docentes que usted coordina. Puede subir varios archivos por docente (máximo 10 MB cada uno); se guardan en la carpeta de Drive indicada por Rectorado, en una subcarpeta con el nombre del docente.</p></div>
+      <div id="pf-area" class="space-y-3"></div>
     </div>
 
     <!-- INFORMES (DIRECTIVOS) -->
@@ -345,7 +414,8 @@
           <div><label class="lbl">Jornada</label><select id="cs-jor" class="inp"></select></div>
           <div><label class="lbl">Año de básica / curso</label><select id="cs-gra" class="inp"></select></div>
           <div><label class="lbl">Paralelo</label><select id="cs-par" class="inp"></select></div>
-          <div><label class="lbl">Nivel / subnivel</label><select id="cs-niv" class="inp"><option value="">Todos</option>${['Inicial', 'Preparatoria', 'Elemental', 'Media', 'Superior', 'Bachillerato'].map(n => `<option>${n}</option>`).join('')}</select></div>
+          <div><label class="lbl">Nivel / subnivel</label><select id="cs-niv" class="inp"><option value="">Todos</option><option>Inicial</option><option>Preparatoria</option><option>Elemental</option><option>Media</option><option>Superior</option><option>Bachillerato</option></select></div>
+          <div><label class="lbl">Área</label><select id="cs-are" class="inp"><option value="">Todas</option><option>Lengua y Literatura</option><option>Matemática</option><option>Ciencias Naturales</option><option>Ciencias Sociales</option><option>Lengua Extranjera</option><option>Educación Cultural y Artística</option><option>Educación Física</option><option>Módulo interdisciplinar</option><option>Optativas</option><option>Inicial y Preparatoria</option></select></div>
           <div class="col-span-2 sm:col-span-1"><label class="lbl">Comisión</label><select id="cs-com" class="inp"></select></div>
           <div><label class="lbl">Tutoría</label><select id="cs-tut" class="inp"><option value="">Todos</option><option value="SI">Solo tutores</option><option value="NO">Solo no tutores</option></select></div>
           <button onclick="consultarDocentes()" class="btn btn-primary">🔎 Buscar</button>
@@ -438,6 +508,25 @@
           <div class="col-span-2"><label class="lbl">Corte</label><select id="cum-corte" class="inp"></select></div>
         </div>
         <button onclick="genCumplimiento()" class="btn btn-primary w-full">Generar informe de cumplimiento</button>
+      </div>
+      <div class="card space-y-2 lg:col-span-2">
+        <div class="flex flex-wrap justify-between items-center gap-2"><div><h3 class="font-black text-sm">✉️ Pendientes de los docentes (calificaciones y planificaciones)</h3>
+          <p class="text-[11px] text-slate-500">Cada docente recibe por correo solo lo suyo. Gmail permite unos 100 correos al día desde el sistema.</p></div>
+          <div class="flex gap-2 items-end"><select id="pd-jor" class="inp w-auto"><option>Matutina</option><option>Vespertina</option><option value="Ambas">Ambas</option></select><button onclick="cargarPendDoc()" class="btn btn-primary">🔎 Consultar</button></div></div>
+        <div id="pd-area" class="text-xs"></div>
+      </div>
+      <div class="card space-y-2 lg:col-span-2">
+        <h3 class="font-black text-sm">📤 Planificaciones y coordinadores de área / subnivel</h3>
+        <div id="co-form" class="hidden grid grid-cols-2 sm:grid-cols-6 gap-2 items-end bg-orange-50 border border-orange-200 rounded-2xl p-3 text-xs">
+          <div class="col-span-2"><label class="lbl">Docente coordinador/a</label><select id="co-doc" class="inp"></select></div>
+          <div><label class="lbl">Área</label><select id="co-are" class="inp"></select></div>
+          <div><label class="lbl">Subnivel</label><select id="co-sub" class="inp"></select></div>
+          <div><label class="lbl">Jornada</label><select id="co-jor" class="inp"><option>Ambas</option><option>Matutina</option><option>Vespertina</option></select></div>
+          <div><label class="lbl">Fecha límite</label><input id="co-lim" type="date" class="inp"></div>
+          <div class="col-span-2 sm:col-span-5"><label class="lbl">Carpeta de Drive (enlace o ID)</label><input id="co-car" class="inp" placeholder="https://drive.google.com/drive/folders/…"></div>
+          <button onclick="guardarCoord()" class="btn btn-ok">💾 Asignar</button>
+        </div>
+        <div id="co-area" class="text-xs"></div>
       </div>
     </div>
 
@@ -545,6 +634,14 @@
 
     <!-- PERMISOS (v4.17: ADMINISTRADOR) -->
     <div id="tab-permisos" class="tab hidden space-y-4">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="card space-y-2"><h3 class="font-black text-sm">🔑 Restablecer contraseñas</h3>
+          <p class="text-[11px] text-slate-500">Solo el Administrador (o el rol al que se lo habilite en "Restablecer contraseñas de otros usuarios"). Los usuarios pueden recuperar su clave por correo con su cédula ("¿Olvidó su contraseña?").</p>
+          <div class="flex gap-2"><select id="rc-usr" class="inp"></select><button onclick="resetUsuario()" class="btn btn-warn">🔑 Nueva contraseña</button></div></div>
+        <div class="card space-y-2"><h3 class="font-black text-sm">🕵️ Cargos de Inspección</h3>
+          <p class="text-[11px] text-slate-500">Nombre del cargo, jornada (Ambas = las dos) y estado. Desactivar no borra lo que el cargo registró.</p>
+          <div id="ci-area" class="text-xs"></div></div>
+      </div>
       <div class="card space-y-2">
         <div class="flex flex-wrap justify-between items-center gap-2"><div><h3 class="font-black text-sm">🛡️ Permisos por rol</h3>
           <p class="text-[11px] text-slate-500">Elija para cada rol: <b>✏️ Editar</b>, <b>👁️ Solo ver</b> o <b>⛔ Bloqueado</b>. El servidor lo aplica de inmediato; la pantalla de quien ya está conectado se actualiza al volver a ingresar.</p></div>
@@ -645,6 +742,7 @@
 
     <!-- PLANILLA DOCENTE -->
     <div id="tab-planilla" class="tab hidden space-y-4">
+      <div class="card py-2 space-y-1"><div class="text-[11px] font-black text-slate-700" id="dm-tit">Sistema de Calificaciones</div><div id="dm-menu" class="flex flex-wrap gap-2 relative z-40"></div></div>
       <div class="card space-y-3">
         <div class="flex flex-wrap justify-between items-center gap-2">
           <div><h3 class="font-black text-sm">📝 Registro de calificaciones</h3>
@@ -668,10 +766,10 @@
       </div>
       <div class="card space-y-3">
         <div id="pl-banner" class="hidden"></div>
+        <div id="pl-barra" class="flex flex-wrap items-center gap-2"><span id="grab-res"></span><span id="sin-grabar" class="hidden px-2 py-1 rounded-full bg-red-100 text-red-800 font-black text-[11px]">⚠️ Hay cambios sin grabar</span><div id="pl-acciones" class="flex flex-wrap justify-end gap-2 ml-auto"></div></div>
         <div id="pl-area"></div>
-        <div class="flex flex-wrap items-center gap-2"><span id="grab-res"></span><div id="pl-acciones" class="flex flex-wrap justify-end gap-2 ml-auto"></div></div>
       </div>
-      <div class="card space-y-2">
+      <div class="card space-y-2 hidden" id="pl-inf-card">
         <h4 class="font-black text-sm">🖨️ Informes del docente (firmas: docente – realizado · vicerrectorado – aprobado)</h4>
         <div id="pl-informes" class="flex flex-wrap gap-2"></div>
       </div>
@@ -686,6 +784,51 @@
     </div>
     <div id="print-area" class="bg-white p-6 rounded-2xl border rep"></div>
   </section>
+</div>
+
+<!-- v4.26: PENDIENTES DEL DOCENTE -->
+<div id="m-pend" class="hidden fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50">
+  <div class="bg-white max-w-2xl w-full p-5 rounded-3xl space-y-3 text-xs max-h-[85vh] overflow-y-auto">
+    <h3 class="font-black text-sm">📋 Sus pendientes</h3><div id="mp-lista" class="space-y-2"></div>
+    <button onclick="cerrarModal('m-pend')" class="btn btn-primary w-full">Entendido</button>
+  </div>
+</div>
+<!-- v4.26: DESCRIPCIÓN DEL INSUMO -->
+<div id="m-desc" class="hidden fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50">
+  <div class="bg-white max-w-md w-full p-5 rounded-3xl space-y-2 text-xs">
+    <h3 class="font-black text-sm" id="mdi-tit">Insumo</h3>
+    <div><label class="lbl">Tema o actividad</label><input id="mdi-tema" class="inp" maxlength="200" placeholder="Ej.: Lección de fracciones"></div>
+    <div class="grid grid-cols-2 gap-2"><div><label class="lbl">Tipo</label><select id="mdi-tipo" class="inp"><option value="">—</option><option>Lección</option><option>Tarea</option><option>Taller</option><option>Trabajo en clase</option><option>Exposición</option><option>Proyecto</option><option>Prueba</option><option>Investigación</option><option>Otro</option></select></div>
+      <div><label class="lbl">Fecha</label><input id="mdi-fecha" type="date" class="inp"></div></div>
+    <div class="flex gap-2"><button onclick="guardarDescInsumo()" class="btn btn-ok flex-1">💾 Guardar</button><button onclick="cerrarModal('m-desc')" class="btn btn-sec">Cancelar</button></div>
+  </div>
+</div>
+<!-- v4.26: CAMBIOS SIN GRABAR -->
+<div id="m-singuardar" class="hidden fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-[60]">
+  <div class="bg-white max-w-sm w-full p-5 rounded-3xl space-y-3 text-xs">
+    <h3 class="font-black text-sm">⚠️ Tiene calificaciones sin grabar</h3><p>¿Qué desea hacer con lo que escribió?</p>
+    <button id="sg-grabar" class="btn btn-ok w-full">💾 Grabar ahora</button>
+    <button id="sg-desc" class="btn btn-warn w-full">🗑️ Descartar y continuar</button>
+    <button id="sg-volver" class="btn btn-sec w-full">↩️ Volver a la planilla</button>
+  </div>
+</div>
+<!-- v4.26: INFORMACIÓN (cronograma) -->
+<div id="m-info" class="hidden fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50">
+  <div class="bg-white max-w-md w-full p-5 rounded-3xl space-y-2 text-xs"><div id="mi-cont"></div><button onclick="cerrarModal('m-info')" class="btn btn-primary w-full">Cerrar</button></div>
+</div>
+<!-- v4.26: CRONOGRAMA POR CORREO -->
+<div id="m-crmail" class="hidden fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50">
+  <div class="bg-white max-w-lg w-full p-5 rounded-3xl space-y-2 text-xs max-h-[90vh] overflow-y-auto">
+    <h3 class="font-black text-sm">✉️ Enviar cronograma por correo</h3>
+    <div><label class="lbl">Asunto</label><input id="cm-asu" class="inp" value="Cronograma escolar"></div>
+    <div><label class="lbl">Texto del correo</label><textarea id="cm-txt" class="inp" rows="5" placeholder="Estimados docentes: …"></textarea></div>
+    <label class="flex items-center gap-2"><input type="checkbox" id="cm-inc" checked> Incluir las actividades del <input id="cm-desde" type="date" class="inp w-auto"> al <input id="cm-hasta" type="date" class="inp w-auto"></label>
+    <div class="flex gap-3 items-center"><label class="flex items-center gap-1"><input type="radio" name="cm-dest" value="TODOS" checked onchange="$('cm-sel').classList.add('hidden')"> Toda la planta docente</label>
+      <select id="cm-jor" class="inp w-auto"><option value="Ambas">Ambas jornadas</option><option>Matutina</option><option>Vespertina</option></select>
+      <label class="flex items-center gap-1"><input type="radio" name="cm-dest" value="SEL" onchange="$('cm-sel').classList.remove('hidden')"> Docentes específicos</label></div>
+    <div id="cm-sel" class="hidden max-h-48 overflow-y-auto border rounded-xl p-2 grid grid-cols-1 sm:grid-cols-2 gap-1"></div>
+    <div class="flex gap-2"><button onclick="enviarCrono()" class="btn btn-warn flex-1">✉️ Enviar</button><button onclick="cerrarModal('m-crmail')" class="btn btn-sec">Cancelar</button></div>
+  </div>
 </div>
 
 <!-- MODAL DOBLE ROL (v4.16) -->
@@ -879,6 +1022,8 @@
       <div><label class="lbl">Estado</label><select id="md-est" class="inp"><option>ACTIVO</option><option>INACTIVO</option></select>
         <p class="text-[10px] text-slate-500">Al pasar a INACTIVO se registra la fecha de salida y se respalda todo lo que ingresó.</p></div>
       <div><label class="lbl">Fecha de ingreso a la institución</label><input id="md-fing" type="date" class="inp"></div>
+      <div class="col-span-2"><label class="lbl">Áreas (vacío = se toman del distributivo)</label><div id="md-areas" class="flex flex-wrap gap-x-3 gap-y-1 text-[11px]"></div></div>
+      <div class="col-span-2"><label class="lbl">Subniveles (vacío = se toman del distributivo)</label><div id="md-subn" class="flex flex-wrap gap-x-3 gap-y-1 text-[11px]"></div></div>
       <div><label class="lbl">Fecha de salida</label><input id="md-fsal" type="date" class="inp" disabled></div>
     </div>
     <!-- v4.14: años, paralelos, asignaturas, optativas y tutoría se asignan en la pestaña Distributivo -->
@@ -897,7 +1042,7 @@
       <div id="md-tutinfo" class="text-[11px] text-purple-900 font-bold"></div>
       <textarea id="md-dist" class="inp bg-slate-100" rows="3" readonly placeholder="Se completa solo desde la pestaña Malla y distributivo"></textarea>
       <div class="flex flex-wrap gap-2 mt-1"><button type="button" onclick="irDistDocente($('md-id').value)" class="btn btn-sec">📋 Editar en Malla y distributivo</button>
-        <button type="button" id="md-clave" onclick="resetClaveDoc($('md-id').value)" class="btn btn-sec">🔑 Nueva contraseña</button>
+        <button type="button" id="md-clave" onclick="resetClaveDoc($('md-id').value)" class="btn btn-sec reset-clave">🔑 Nueva contraseña</button>
         <button type="button" id="md-resp" onclick="respaldarDocente($('md-id').value)" class="btn btn-sec">💾 Respaldar información del docente</button></div>
       <p class="text-[10px] text-slate-500 mt-0.5">El distributivo se arma eligiendo docente, curso, paralelo y asignatura en <b>Malla y distributivo</b>; también se puede cargar con la plantilla Excel.</p></div>
     <div class="hidden grid grid-cols-1 sm:grid-cols-4 gap-2">
@@ -1131,7 +1276,7 @@ api('apiInfoPublica').then(i => {
   revisarVersion(i.version);
 }).catch(() => {});
 // ---- v4.20: la página se actualiza sola cuando hay una versión nueva del sistema ----
-const VERSION_CLIENTE = '4.25';
+const VERSION_CLIENTE = '4.26.2';
 function revisarVersion(v) {
   if (!v || v === VERSION_CLIENTE || EN_APPS_SCRIPT) return;
   if (S.sucio) return; // nunca se recarga con notas sin guardar
@@ -1224,6 +1369,7 @@ async function elegirRol(rol) {
   });
 }
 function salir(silencioso) {
+  if (!silencioso && S.sucio) { confirmarCambio().then(ok => { if (ok) { S.sucio = false; salir(); } }); return; } // v4.26
   if (!silencioso && !seguirSinGuardar()) return;
   if (S.token && !silencioso) api('apiCerrarSesion', S.token).catch(() => {});
   S.token = null; S.ses = null; S.cat = null; S.roles = [];
@@ -1241,14 +1387,18 @@ function iniciarApp() {
   $('b-rol').textContent = S.ses.cargo + (S.ses.rol === 'DOCENTE' ? ' · ' + S.ses.jornada : '');
   $('b-cambiarol').classList.toggle('hidden', !(S.roles && S.roles.length > 1));
   const R = S.ses.rol;
-  let tabs = R === 'DOCENTE' ? [['planilla', '📝 Mis calificaciones']]
-    : R === 'ADMINISTRADOR' ? [['permisos', '🛡️ Permisos y herramientas'], ['institucion', '🏫 Institución']]
+  let tabs = R === 'DOCENTE' ? [['planilla', '📝 Mis calificaciones']].concat(S.cat.coordinador ? [['planif', '📤 Planificaciones']] : [], [['crono', '📅 Cronograma escolar']])
+    : R === 'ADMINISTRADOR' ? [['permisos', '🛡️ Permisos y herramientas'], ['institucion', '🏫 Institución'], ['crono', '📅 Cronograma escolar']]
     : R === 'RECTORA' ? [['estudiantes', '🎒 Estudiantes'], ['docentes', '👨‍🏫 Docentes'], ['optativas', '🎓 Optativas BGU'], ['periodos', '📅 Fechas, cortes y bloqueos'], ['informes', '📊 Informes'], ['seguimiento', '⚠️ Seguimiento y cumplimiento'], ['inasistencias', '🚨 Inasistencias'], ['efb', '🎓 Evaluación final de Bachillerato'], ['malla', '📋 Distributivo'], ['consulta', '📖 Consulta de calificaciones'], ['proyectos', '🧩 Proyectos interdisciplinarios'], ['mejoras', '📝 Mejoras'], ['correcciones', '✏️ Correcciones'], ['cierretrim', '🔒 Cierre de trimestre'], ['institucion', '🏫 Institución'], ['cierre', '🎓 Cierre del año']]
-    : esInspeccion() ? [['inasistencias', '🚨 Inasistencias y justificaciones']]
+    : esInspeccion() ? [['inasistencias', '🚨 Inasistencias y justificaciones'], ['crono', '📅 Cronograma escolar']]
     : [['estudiantes', '🎒 Estudiantes'], ['optativas', '🎓 Optativas BGU'], ['informes', '📊 Informes'], ['seguimiento', '⚠️ Seguimiento y cumplimiento'], ['efb', '🎓 Evaluación final de Bachillerato'], ['malla', '📋 Distributivo'], ['consulta', '📖 Consulta de calificaciones'], ['proyectos', '🧩 Proyectos interdisciplinarios'], ['mejoras', '📝 Mejoras'], ['correcciones', '✏️ Correcciones'], ['cierretrim', '🔒 Cierre de trimestre']];
   // v4.17: las pestañas de funciones bloqueadas por el Administrador no se muestran
   const bloq = S.cat.bloqueos || [];
+  if (R === 'RECTORA' || R === 'VICERRECTORA_MATUTINA' || R === 'VICERRECTOR_VESPERTINA') tabs.push(['crono', '📅 Cronograma escolar']); // v4.26
   tabs = tabs.filter(t => !bloq.includes(TAB_FUN[t[0]]));
+  document.body.classList.toggle('sin-reset', R !== 'ADMINISTRADOR' && bloq.includes('RESET_CLAVES')); // v4.26
+  if (R === 'DOCENTE') { $('dm-tit').textContent = 'Ingreso al Sistema de Calificaciones · ' + ((S.cat.inst && S.cat.inst.periodo) ? 'Año lectivo ' + S.cat.inst.periodo : ''); setTimeout(() => { actualizarCampana(); if (!S.pendVisto && ((S.cat.avisos || {}).pendientes || []).length) { S.pendVisto = true; verPendientes(); } }, 400); }
+  else $('b-pend').classList.add('hidden');
   if (!tabs.length) { alert('El Administrador del sistema bloqueó todas las funciones de su perfil.'); salir(); return; }
   $('nav').innerHTML = tabs.map(t => `<button data-tab="${t[0]}" onclick="irTab('${t[0]}')" class="tabbtn px-4 py-2 rounded-xl font-semibold text-slate-600 hover:bg-slate-100 whitespace-nowrap">${t[1]}</button>`).join('');
   document.querySelectorAll('.solo-rectora').forEach(e => e.classList.toggle('hidden', R !== 'RECTORA' && !(R === 'ADMINISTRADOR' && e.closest('#tab-institucion'))));
@@ -1257,7 +1407,7 @@ function iniciarApp() {
   irTab(tabs[0][0]);
 }
 
-const TAB_FUN = { consulta: 'CONSULTA', proyectos: 'PROYECTOS', mejoras: 'MEJORAS', correcciones: 'CORRECCIONES', estudiantes: 'ESTUDIANTES', docentes: 'DOCENTES', optativas: 'OPTATIVAS', periodos: 'PERIODOS', informes: 'INFORMES', seguimiento: 'SEGUIMIENTO', inasistencias: 'INASISTENCIAS', efb: 'EFB', malla: 'DISTRIBUTIVO', cierretrim: 'CIERRE_TRIM', institucion: 'INSTITUCION', cierre: 'CIERRE_ANIO' };
+const TAB_FUN = { planif: 'PLANIFICACIONES', consulta: 'CONSULTA', proyectos: 'PROYECTOS', mejoras: 'MEJORAS', correcciones: 'CORRECCIONES', estudiantes: 'ESTUDIANTES', docentes: 'DOCENTES', optativas: 'OPTATIVAS', periodos: 'PERIODOS', informes: 'INFORMES', seguimiento: 'SEGUIMIENTO', inasistencias: 'INASISTENCIAS', efb: 'EFB', malla: 'DISTRIBUTIVO', cierretrim: 'CIERRE_TRIM', institucion: 'INSTITUCION', cierre: 'CIERRE_ANIO' };
 const SUB_FUN = { proy: 'D_PROYECTO', trans: 'D_PROYECTO', mej: 'D_MEJORA', form: 'D_FORMATIVA', ref: 'D_REFUERZO', sum: 'D_SUMATIVA', ini: 'D_DESTREZAS', aia: 'D_CUALITATIVA', lec: 'D_CUALITATIVA', opt: 'D_CUALITATIVA', ovp: 'D_CUALITATIVA', asis: 'D_ASISTENCIA', just: 'D_ASISTENCIA', efb: 'D_EFB' };
 const esRect = () => S.ses && S.ses.rol === 'RECTORA';
 // ---- v4.18: "Solo ver" asignado por el Administrador: la pestaña se muestra sin botones de guardar (el servidor también lo impide) ----
@@ -1276,9 +1426,9 @@ function aplicarLectura() {
 }
 new MutationObserver(() => { clearTimeout(S._lt); S._lt = setTimeout(aplicarLectura, 30); }).observe(document.body, { childList: true, subtree: true });
 const ON_TAB = {
-  permisos: () => { cargarPermisos(); cargarRespaldos('rs-adm'); iniHistorial(); }, cierretrim: () => iniCierreTrim(), consulta: () => iniConsulta2(), proyectos: () => iniProyectos(), mejoras: () => iniMejoras(), correcciones: () => iniCorrecciones(),
-  estudiantes: () => cargarEstudiantes(), docentes: () => cargarDocentes(), periodos: () => { renderPeriodos(); cargarDesbloqueos(); },
-  optativas: () => cargarOptativas(), inasistencias: () => cargarInasistencias(), cierre: () => cargarCierre(), efb: () => iniEFB(), malla: () => iniMalla(), informes: () => { cargarAnios(); infCurso(); }, seguimiento: () => cumCortes(), institucion: () => { cargarInstitucion(); if (S.ses.rol === 'ADMINISTRADOR') cargarRespaldos('rs-inst'); if ($('dp-area-r')) $('dp-area-r').innerHTML = ''; }, planilla: () => initPlanilla()
+  permisos: () => { cargarPermisos(); cargarRespaldos('rs-adm'); iniHistorial(); cargarAdminExtras(); }, crono: () => cargarCrono(), planif: () => cargarPlanif(), cierretrim: () => iniCierreTrim(), consulta: () => iniConsulta2(), proyectos: () => iniProyectos(), mejoras: () => iniMejoras(), correcciones: () => iniCorrecciones(),
+  estudiantes: () => cargarEstudiantes(), docentes: () => cargarDocentes(), periodos: () => { renderPeriodos(); cargarDesbloqueos(); cargarAperturas(); },
+  optativas: () => cargarOptativas(), inasistencias: () => cargarInasistencias(), cierre: () => cargarCierre(), efb: () => iniEFB(), malla: () => iniMalla(), informes: () => { cargarAnios(); infCurso(); }, seguimiento: () => { cumCortes(); cargarCoord(); }, institucion: () => { cargarInstitucion(); if (S.ses.rol === 'ADMINISTRADOR') cargarRespaldos('rs-inst'); if ($('dp-area-r')) $('dp-area-r').innerHTML = ''; }, planilla: () => initPlanilla()
 };
 function irTab(t) {
   if (t !== 'informes' && S.anioArch) { S.anioArch = ''; if ($('inf-anio')) $('inf-anio').value = ''; avisoAnio(); }
@@ -1522,7 +1672,7 @@ async function cargarDocentes() {
       <td>${esc(d.asignaturas.join(', '))}</td><td>${d.esTutor ? `<span class="px-2 rounded bg-purple-100 text-purple-900 font-bold">${esc(d.tutorGrado)} - ${esc(d.tutorParalelo)}${d.tutorJornada ? ' · ' + esc(d.tutorJornada) : ''}</span>` : 'NO'}</td>
       <td>${esc(d.optativas)}</td><td>${esc(d.estado)}</td>
       <td class="whitespace-nowrap"><button onclick="abrirDocente('${esc(d.id)}')" class="btn btn-sec py-1">✏️</button>
-      <button onclick="resetClaveDoc('${esc(d.id)}')" title="Generar nueva contraseña" class="btn btn-sec py-1">🔑</button></td></tr>`).join('')
+      <button onclick="resetClaveDoc('${esc(d.id)}')" title="Generar nueva contraseña" class="btn btn-sec py-1 reset-clave">🔑</button></td></tr>`).join('')
       || '<tr><td colspan="11" class="text-center text-slate-400 py-4">Aún no hay docentes registrados.</td></tr>';
   });
 }
@@ -1533,6 +1683,8 @@ function abrirDocente(id) {
   $('md-tit2').value = d.titulo || ''; $('md-nom').value = d.nombres || ''; $('md-ape').value = d.apellidos || '';
   $('md-cor').value = d.correo || ''; $('md-ced').value = d.cedula || ''; $('md-jor').value = d.jornada; $('md-car').value = d.carga || 30;
   $('md-opt').value = d.optativas || 'NO'; $('md-est').value = d.estado || 'ACTIVO';
+  $('md-areas').innerHTML = AREAS_C.map(a => `<label class="flex gap-1 items-center"><input type="checkbox" value="${esc(a)}" ${(d.areasFicha || []).includes(a) ? 'checked' : ''}>${esc(a)}</label>`).join('');
+  $('md-subn').innerHTML = SUBN_C.map(a => `<label class="flex gap-1 items-center"><input type="checkbox" value="${esc(a)}" ${(d.subnivelesFicha || []).includes(a) ? 'checked' : ''}>${esc(a)}</label>`).join('');
   $('md-dist').value = String(d.distributivo || '').split(/;\s*/).filter(Boolean).join('\n');
   $('md-fing').value = d.fechaIngreso || ''; $('md-fsal').value = d.fechaSalida || '';
   $('md-resp').classList.toggle('hidden', !id); $('md-clave').classList.toggle('hidden', !id);
@@ -1556,7 +1708,7 @@ const marcados = id => [...$(id).querySelectorAll('input:checked')].map(i => i.v
 async function guardarDocente() {
   // v4.14: la ficha guarda solo datos generales; lo académico se asigna en Distributivo
   const g = { id: $('md-id').value, titulo: $('md-tit2').value, nombres: $('md-nom').value, apellidos: $('md-ape').value, correo: $('md-cor').value, cedula: $('md-ced').value,
-    jornada: $('md-jor').value, estado: $('md-est').value, fechaIngreso: $('md-fing').value, soloGenerales: true };
+    jornada: $('md-jor').value, estado: $('md-est').value, fechaIngreso: $('md-fing').value, soloGenerales: true, areas: marcados('md-areas'), subniveles: marcados('md-subn') };
   await run(async () => {
     const r = await apiT('apiGuardarDocente', g);
     cerrarModal('m-doc'); toast(r.mensaje + (g.id ? '' : ' Ahora asígnele sus clases en la pestaña Distributivo.'), 'ok');
@@ -1571,7 +1723,7 @@ async function guardarDocenteCompleto() {
     id: $('md-id').value, titulo: $('md-tit2').value, nombres: $('md-nom').value, apellidos: $('md-ape').value, correo: $('md-cor').value, cedula: $('md-ced').value,
     jornada: $('md-jor').value, carga: $('md-car').value, grados: marcados('md-gra'), paralelos: marcados('md-par'), asignaturas: asig,
     esTutor: $('md-tut').value, tutorGrado: $('md-tgra').value, tutorParalelo: $('md-tpar').value, tutorJornada: $('md-tjor').value, optativas: $('md-opt').value, optativasNombres: optn, estado: $('md-est').value,
-    distributivo: $('md-dist').value, fechaIngreso: $('md-fing').value
+    distributivo: $('md-dist').value, fechaIngreso: $('md-fing').value, areas: marcados('md-areas'), subniveles: marcados('md-subn')
   };
   await run(async () => {
     const r = await apiT('apiGuardarDocente', o);
@@ -1699,7 +1851,7 @@ async function cargarInstitucion() {
         <input id="dirc-${d.rol}" class="inp font-mono" value="${esc(d.cedula)}" placeholder="Cédula" title="Si esta autoridad también dicta clases, use la MISMA cédula de su ficha de docente: así podrá cambiar entre el rol administrativo y el de docente.">
         <input id="dire-${d.rol}" class="inp" value="${esc(d.correo)}" placeholder="Correo"></div>
       <div class="flex gap-1 justify-end"><button onclick="guardarDirectivo('${d.rol}')" class="btn btn-sec">💾 Guardar</button>
-      <button onclick="resetDirectivo('${d.rol}')" title="Nueva contraseña" class="btn btn-sec">🔑 Nueva clave</button></div></div>`).join('');
+      <button onclick="resetDirectivo('${d.rol}')" title="Nueva contraseña" class="btn btn-sec reset-clave">🔑 Nueva clave</button></div></div>`).join('');
     $('esc-body').innerHTML = `<table class="tabla"><thead><tr><th>Tipo</th><th>Desde</th><th>Hasta</th><th>Código</th><th>Descripción</th></tr></thead><tbody>
       ${r.escala.map(e => `<tr><td>${esc(e.tipo)}</td><td>${f2(e.desde)}</td><td>${f2(e.hasta)}</td><td class="font-bold">${esc(e.codigo)}</td><td>${esc(e.desc)}</td></tr>`).join('')}</tbody></table>`;
   });
@@ -2029,6 +2181,313 @@ async function respaldarAhora(area) {
   cargarRespaldos(area);
 }
 async function activarAutomaticos(area) { await run(async () => { const r = await apiT('apiActivarAutomaticos'); toast(r.mensaje, 'ok'); }); cargarRespaldos(area); }
+// ============================================================================
+// v4.26: MENÚ SUPERIOR DEL DOCENTE · PENDIENTES · CAMBIOS SIN GRABAR · DESCRIPCIÓN DE INSUMOS
+// ============================================================================
+const AREAS_C = ['Lengua y Literatura', 'Matemática', 'Ciencias Naturales', 'Ciencias Sociales', 'Lengua Extranjera', 'Educación Cultural y Artística', 'Educación Física', 'Módulo interdisciplinar', 'Optativas', 'Inicial y Preparatoria'];
+const SUBN_C = ['Inicial', 'Preparatoria', 'Elemental', 'Media', 'Superior', 'Bachillerato'];
+function pintarMenuDoc() {
+  const subs = S.plSubs || [], has = k => subs.find(x => x[0] === k), acc = S.menuAcc = [], add = f => { acc.push(f); return acc.length - 1; };
+  const it = (t, f) => ({ t, i: add(f) });
+  const irSub = k => () => { S.sub = k; plCambio(true); };
+  const g = [];
+  const form = [];
+  if (has('form')) [...$('pl-corte').options].forEach(o => form.push(it('📝 ' + o.text, () => { $('pl-corte').value = o.value; S.sub = 'form'; plCambio(true); })));
+  ['ini', 'ref'].forEach(k => { if (has(k)) form.push(it(has(k)[1], irSub(k))); });
+  if (form.length) g.push({ t: '📘 Insumos formativos', c: '#0369a1', items: form });
+  const sum = ['proy', 'sum', 'trans', 'mej'].filter(has).map(k => it(has(k)[1], irSub(k)));
+  if (sum.length) g.push({ t: '📕 Insumos sumativos', c: '#7e22ce', items: sum });
+  const tri = ['lec', 'opt', 'ovp', 'aia', 'asis', 'just', 'efb'].filter(has).map(k => it(has(k)[1], irSub(k)));
+  if (has('form')) tri.push(it('🖨️ Sábana del trimestre', () => genSabana()));
+  if (tri.length) g.push({ t: '📗 Trimestre', c: '#15803d', items: tri });
+  const inf = (S.plInf || []).map((x, n) => it(x[1], () => { const b = $('pl-informes').querySelectorAll('button')[n]; if (b) b.click(); }));
+  if (inf.length) g.push({ t: '📄 Informes', c: '#475569', items: inf });
+  if (S.cat.coordinador) g.push({ t: '📤 Subir planificaciones', c: '#c2410c', items: [it('Abrir planificaciones', () => irTab('planif'))] });
+  g.push({ t: '📅 Cronograma escolar', c: '#0e7490', items: [it('Ver cronograma', () => irTab('crono'))] });
+  $('dm-menu').innerHTML = g.map((x, n) => `<div class="dm-grupo"><button class="dm-btn" style="background:${x.c}" onclick="dmAbrir(${n}, event)">${x.t} ▾</button>
+    <div class="dm-panel hidden" id="dm-p-${n}">${x.items.map(y => `<button class="dm-item" onclick="dmIr(${y.i})">${esc(y.t)}</button>`).join('')}</div></div>`).join('');
+}
+function dmAbrir(n, ev) { ev.stopPropagation(); document.querySelectorAll('.dm-panel').forEach((p, i) => p.classList.toggle('hidden', i !== n || !p.classList.contains('hidden'))); }
+document.addEventListener('click', () => document.querySelectorAll('.dm-panel').forEach(p => p.classList.add('hidden')));
+async function dmIr(i) { document.querySelectorAll('.dm-panel').forEach(p => p.classList.add('hidden')); if (!(await confirmarCambio())) return; if (S.menuAcc[i]) S.menuAcc[i](); }
+/** Cambios sin grabar: Grabar ahora / Descartar / Volver. Devuelve true si se puede continuar. */
+function confirmarCambio() {
+  if (!S.sucio) return Promise.resolve(true);
+  return new Promise(res => {
+    abrirModal('m-singuardar');
+    const fin = v => { cerrarModal('m-singuardar'); res(v); };
+    $('sg-volver').onclick = () => fin(false);
+    $('sg-desc').onclick = () => { S.sucio = false; fin(true); };
+    $('sg-grabar').onclick = () => {
+      const b = [...$('pl-acciones').querySelectorAll('button')].find(x => /guardar|grabar/i.test(x.textContent));
+      if (!b) { toast('No hay un botón para grabar en esta pantalla.', 'err'); return fin(false); }
+      cerrarModal('m-singuardar'); b.click();
+      let n = 0; const t = setInterval(() => { n++; if (!S.sucio || n > 60) { clearInterval(t); res(!S.sucio); } }, 400);
+    };
+  });
+}
+document.addEventListener('input', e => { if (e.target.closest && e.target.closest('#pl-area') && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) e.target.classList.add('cambiado'); });
+document.addEventListener('change', e => { if (e.target.closest && e.target.closest('#pl-area') && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) e.target.classList.add('cambiado'); });
+setInterval(() => {
+  if (!$('sin-grabar')) return;
+  const sc = !!S.sucio; $('sin-grabar').classList.toggle('hidden', !sc || !!($('grab-res') && $('grab-res').textContent.trim()));
+  const b = $('pl-acciones') && [...$('pl-acciones').querySelectorAll('button')].find(x => /guardar|grabar/i.test(x.textContent));
+  if (b) b.classList.toggle('parpadea', sc);
+  if (!sc) document.querySelectorAll('#pl-area .cambiado').forEach(x => x.classList.remove('cambiado'));
+  if (S.ses && S.ses.rol === 'DOCENTE') actualizarCampana();
+}, 500);
+function actualizarCampana() { const n = ((S.cat && S.cat.avisos) || {}).pendientes ? S.cat.avisos.pendientes.length : 0; $('b-pend').classList.toggle('hidden', !(S.ses && S.ses.rol === 'DOCENTE')); $('b-pend-n').textContent = n || ''; }
+function verPendientes() {
+  const l = ((S.cat && S.cat.avisos) || {}).pendientes || [];
+  const ico = { INSUMOS: '📝', REFUERZO: '🩹', MEJORA: '📈', PROYECTO: '🧩', PLANIFICACION: '📤' }, tit = { INSUMOS: 'Insumos formativos', REFUERZO: 'Refuerzo pedagógico', MEJORA: 'Mejoras', PROYECTO: 'Proyecto / sumativa', PLANIFICACION: 'Planificaciones' };
+  const grupos = {}; l.forEach(x => (grupos[x.tipo] = grupos[x.tipo] || []).push(x.texto));
+  $('mp-lista').innerHTML = l.length ? Object.keys(grupos).map(k => `<div class="border rounded-2xl p-2"><div class="font-black mb-1">${ico[k] || '•'} ${tit[k] || k}</div>${grupos[k].map(t => `<div>• ${esc(t)}</div>`).join('')}</div>`).join('')
+    : '<p class="text-emerald-700 font-bold">✅ No tiene pendientes por ahora.</p>';
+  abrirModal('m-pend');
+}
+let _descK = 0;
+function descInsumo(k) {
+  const d = S.pl.data || {}, x = (d.desc || {})[k] || {};
+  if (!(d.permiso && d.permiso.editable)) { if (x.tema) toast('I' + k + ': ' + [x.tema, x.tipo, x.fecha].filter(Boolean).join(' · '), 'ok'); return; }
+  _descK = k; $('mdi-tit').textContent = '✎ Insumo I' + k + ' – ¿de qué trata?'; $('mdi-tema').value = x.tema || ''; $('mdi-tipo').value = x.tipo || ''; $('mdi-fecha').value = x.fecha || '';
+  abrirModal('m-desc');
+}
+async function guardarDescInsumo() {
+  const k = _descK, x = { tema: $('mdi-tema').value, tipo: $('mdi-tipo').value, fecha: $('mdi-fecha').value };
+  await run(async () => {
+    const r = await apiT('apiGuardarDescInsumo', S.pl.ctx, k, x); toast(r.mensaje, 'ok'); cerrarModal('m-desc');
+    S.pl.data.desc = S.pl.data.desc || {}; S.pl.data.desc[k] = x;
+    const th = document.querySelector(`#pl-area th[data-desck="${k}"]`);
+    if (th) { th.title = [x.tema, x.tipo, x.fecha].filter(Boolean).join(' · '); th.innerHTML = 'I' + k + (x.tema ? `<div class="text-[8px] font-normal text-sky-900 max-w-[72px] truncate mx-auto">${esc(x.tema)}</div>` : '<div class="text-[8px] font-normal text-slate-400">✎</div>'); }
+  });
+}
+/** Las explicaciones largas de cada planilla quedan dentro de "ℹ️ Indicaciones". */
+function colapsarAyuda() {
+  const A = $('pl-area'); if (!A) return;
+  [...A.children].forEach(el => {
+    if (el.tagName !== 'DIV' || el.classList.contains('aviso-ajenas') || el.querySelector('table,input,select,button,textarea')) return;
+    if ((el.textContent || '').trim().length < 140) return;
+    const det = document.createElement('details'); det.className = 'ayuda mb-2';
+    det.innerHTML = '<summary class="cursor-pointer text-[11px] font-bold text-sky-800">ℹ️ Indicaciones</summary>';
+    A.insertBefore(det, el); det.appendChild(el);
+  });
+}
+const clasesJor = x => (x.porJornada && x.porJornada.length ? x.porJornada.map(j => `<b>${esc(j.jornada)}${j.horas ? ' (' + j.horas + ' h)' : ''}:</b><br>${j.clases.map(esc).join('<br>')}`).join('<br>') : x.clases.map(esc).join('<br>')) + (x.areas && x.areas.length ? `<br><i>Áreas: ${x.areas.map(esc).join(', ')}</i>` : '') || '—';
+
+// ---- Rectorado: apertura general ----
+async function cargarAperturas() {
+  if (!esRect()) return;
+  const ps = (S.per || S.cat.periodos || []).filter(p => p.tipo === 'CORTE' || p.tipo === 'TRIMESTRE');
+  $('ap-per').innerHTML = ps.map(p => `<option value="${esc(p.id)}">${esc(p.nombre)} · ${p.tipo === 'CORTE' ? 'corte' : 'trimestre'} ${esc(String(p.trimestre || ''))} · ${esc(p.jornada || '')}</option>`).join('');
+  $('ap-gra').innerHTML = gradosList().map(g => `<label class="flex gap-1 items-center"><input type="checkbox" value="${esc(g)}">${esc(g)}</label>`).join('');
+  try {
+    const l = S.aper = await apiT('apiListarAperturas');
+    $('ap-lista').innerHTML = `<div class="overflow-x-auto border rounded-2xl"><table class="w-full planilla text-[11px]"><thead class="bg-slate-100"><tr><th>ID</th><th>Fecha</th><th>Periodo</th><th>Jornada</th><th>Cursos</th><th>Vigente hasta</th><th class="text-left">Motivo</th><th>Autorizó</th><th>Estado</th><th></th></tr></thead><tbody>
+      ${l.map(a => `<tr class="${a.vigente ? 'bg-emerald-50' : ''}"><td>${esc(a.ID)}</td><td>${esc(a.Fecha_Hora)}</td><td>${esc(a.Periodo)}</td><td>${esc(a.Jornada)}</td><td>${esc(a.Grados || 'Todos')}</td><td>${esc(a.Vigente_Hasta)}</td><td style="text-align:left">${esc(a.Motivo)}</td><td>${esc(a.Autorizado_Por)}</td><td>${a.vigente ? 'VIGENTE' : esc(a.Estado === 'ANULADA' ? 'ANULADA' : 'VENCIDA')}</td>
+        <td>${a.vigente ? `<button onclick="anularApertura('${esc(a.ID)}')" class="btn btn-sec py-0.5">Anular</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="10" class="text-slate-400 py-2">Sin aperturas.</td></tr>'}</tbody></table></div>`;
+  } catch (e) { $('ap-lista').textContent = e.message; }
+}
+async function guardarApertura() {
+  const x = { idPeriodo: $('ap-per').value, jornada: $('ap-jor').value, vigenteHasta: $('ap-hasta').value, motivo: $('ap-mot').value, grados: marcados('ap-gra') };
+  await run(async () => { const r = await apiT('apiGuardarApertura', x); toast(r.mensaje, 'ok'); $('ap-mot').value = ''; cargarAperturas(); });
+}
+async function anularApertura(id) { if (!confirm('¿Anular la apertura ' + id + '? Volverán a regir las fechas del periodo.')) return; await run(async () => { const r = await apiT('apiAnularApertura', id); toast(r.mensaje, 'ok'); cargarAperturas(); }); }
+function imprimirAperturas() {
+  const l = S.aper || [];
+  mostrarReporte({ tipo: 'html', titulo: 'Registro de aperturas generales', sub: 'Auditoría interna de Rectorado', inst: S.cat.inst, params: S.cat.params, emitido: S.cat.hoy, emisor: S.ses.nombre, filtros: {},
+    html: `<table><thead><tr><th>ID</th><th>Fecha</th><th>Periodo</th><th>Jornada</th><th>Cursos</th><th>Vigente hasta</th><th>Motivo</th><th>Autorizó</th><th>Estado</th></tr></thead><tbody>${l.map(a => `<tr><td>${esc(a.ID)}</td><td>${esc(a.Fecha_Hora)}</td><td>${esc(a.Periodo)}</td><td>${esc(a.Jornada)}</td><td>${esc(a.Grados || 'Todos')}</td><td>${esc(a.Vigente_Hasta)}</td><td>${esc(a.Motivo)}</td><td>${esc(a.Autorizado_Por)}</td><td>${a.vigente ? 'VIGENTE' : esc(a.Estado)}${a.Anulado_Por ? '<br><small>' + esc(a.Anulado_Por) + '</small>' : ''}</td></tr>`).join('')}</tbody></table>`,
+    firmas: [[S.cat.inst.rectora, 'Rectora', 'APROBADO']] });
+}
+
+// ---- Administrador: contraseñas y cargos de Inspección ----
+async function cargarAdminExtras() {
+  try {
+    const u = await apiT('apiUsuariosClaves');
+    $('rc-usr').innerHTML = '<option value="">— Seleccione el usuario —</option><optgroup label="Directivos e Inspección">' + u.directivos.map(d => `<option value="R:${esc(d.rol)}">${esc(d.cargo)} – ${esc(d.nombre || d.usuario)}</option>`).join('') + '</optgroup><optgroup label="Docentes">' + u.docentes.map(d => `<option value="D:${esc(d.id)}">${esc(d.nombre)} (${esc(d.usuario)})</option>`).join('') + '</optgroup>';
+    const c = await apiT('apiCargosInspeccion');
+    $('ci-area').innerHTML = c.map(x => `<div class="border rounded-xl p-2 mb-1 grid grid-cols-2 sm:grid-cols-6 gap-1 items-end ${x.estado === 'INACTIVO' ? 'bg-slate-100' : ''}">
+      <div class="col-span-2"><label class="lbl">Cargo</label><input id="ci-c-${x.rol}" class="inp" value="${esc(x.cargo)}"></div>
+      <div class="col-span-2"><label class="lbl">Nombre de la persona</label><input id="ci-n-${x.rol}" class="inp" value="${esc(x.nombre)}"></div>
+      <div><label class="lbl">Jornada</label><select id="ci-j-${x.rol}" class="inp">${opts(['Ambas', 'Matutina', 'Vespertina'], x.jornada)}</select></div>
+      <div><label class="lbl">Estado</label><select id="ci-e-${x.rol}" class="inp">${opts(['ACTIVO', 'INACTIVO'], x.estado)}</select></div>
+      <div class="col-span-2 sm:col-span-5 text-[10px] text-slate-500">Usuario: <b>${esc(x.usuario)}</b></div><button onclick="guardarCargoInsp('${x.rol}')" class="btn btn-ok py-1">💾</button></div>`).join('');
+  } catch (e) { console.log(e); }
+}
+async function guardarCargoInsp(rol) { await run(async () => { const r = await apiT('apiGuardarCargoInspeccion', { rol, cargo: $('ci-c-' + rol).value, nombre: $('ci-n-' + rol).value, jornada: $('ci-j-' + rol).value, estado: $('ci-e-' + rol).value }); toast(r.mensaje, 'ok'); cargarAdminExtras(); }); }
+async function resetUsuario() {
+  const v = $('rc-usr').value; if (!v) return toast('Seleccione el usuario.', 'err');
+  if (!confirm('¿Generar una nueva contraseña? La anterior dejará de funcionar.')) return;
+  await run(async () => { const r = await apiT(v[0] === 'D' ? 'apiRestablecerClaveDocente' : 'apiRestablecerClaveDirectivo', v.slice(2)); mostrarCred(r.credenciales); });
+}
+
+// ---- Seguimiento: pendientes de los docentes y coordinadores ----
+async function cargarPendDoc() {
+  await run(async () => {
+    const l = S.pdoc = await apiT('apiPendientesDocentes', $('pd-jor').value), puede = !(S.cat.bloqueos || []).includes('SEG_CORREO');
+    $('pd-area').innerHTML = `<div class="overflow-x-auto border rounded-2xl max-h-[420px]"><table class="w-full planilla text-[11px]"><thead class="bg-slate-100"><tr><th><input type="checkbox" onchange="document.querySelectorAll('.pd-chk').forEach(c => c.checked = this.checked)"></th><th class="text-left">Docente</th><th>Correo</th><th>Pendientes</th><th class="text-left">Detalle</th></tr></thead><tbody>
+      ${l.map(x => `<tr><td>${x.pendientes.length ? `<input type="checkbox" class="pd-chk" value="${esc(x.id)}" ${x.correo ? '' : 'disabled title="Sin correo registrado"'}>` : ''}</td><td style="text-align:left">${esc(x.nombre)}</td><td>${x.correo ? esc(x.correo) : '<span class="text-red-700 font-bold">sin correo</span>'}</td>
+        <td class="font-black ${x.pendientes.length ? 'text-amber-700' : 'text-emerald-700'}">${x.pendientes.length || '✅ 0'}</td><td style="text-align:left">${x.pendientes.length ? `<details><summary class="cursor-pointer">ver</summary>${x.pendientes.map(p => '• ' + esc(p.texto)).join('<br>')}</details>` : ''}</td></tr>`).join('')}</tbody></table></div>
+      ${puede ? `<div class="mt-2 space-y-1"><label class="lbl">Nota adicional para el correo (opcional)</label><textarea id="pd-nota" class="inp" rows="2"></textarea>
+        <div class="flex flex-wrap gap-2"><button onclick="enviarPendDoc(false)" class="btn btn-warn">✉️ Enviar a seleccionados</button><button onclick="enviarPendDoc(true)" class="btn btn-sec">✉️ Enviar a todos con pendientes</button></div></div>` : '<p class="text-[11px] text-slate-500 mt-1">El envío por correo está bloqueado por el Administrador.</p>'}`;
+  });
+}
+async function enviarPendDoc(todos) {
+  const ids = todos ? (S.pdoc || []).filter(x => x.pendientes.length && x.correo).map(x => x.id) : marcados('pd-area').filter(v => v !== 'on');
+  if (!ids.length) return toast('Seleccione al menos un docente con pendientes y correo.', 'err');
+  if (!confirm('¿Enviar el informe de pendientes a ' + ids.length + ' docente(s)?')) return;
+  await run(async () => { const r = await apiT('apiEnviarSeguimiento', ids, $('pd-nota').value); toast(r.mensaje, 'ok'); });
+}
+async function cargarCoord() {
+  try {
+    const r = S.coord = await apiT('apiCoordinadores', $('pd-jor') ? $('pd-jor').value : '');
+    $('co-form').classList.toggle('hidden', !r.puedeEditar || (S.cat.bloqueos || []).includes('COORDINADORES'));
+    if (r.puedeEditar) {
+      $('co-doc').innerHTML = opts(r.docentes.map(d => d.id), '', '—'); [...$('co-doc').options].forEach(o => { const d = r.docentes.find(x => x.id === o.value); if (d) o.textContent = d.nombre; });
+      $('co-are').innerHTML = '<option value="">(cualquiera)</option>' + r.areas.map(a => `<option>${esc(a)}</option>`).join('');
+      $('co-sub').innerHTML = '<option value="">(cualquiera)</option>' + r.subniveles.map(a => `<option>${esc(a)}</option>`).join('');
+    }
+    $('co-area').innerHTML = r.coordinaciones.length ? r.coordinaciones.map(c => `<div class="border rounded-2xl p-2 mb-2">
+      <div class="flex flex-wrap justify-between gap-2"><div><b>${esc(c.coordinador)}</b> · ${esc(c.texto)}${c.fechaLimite ? ' · fecha límite ' + esc(c.fechaLimite) : ''} · <span class="font-black ${c.entregados === c.docentes.length ? 'text-emerald-700' : 'text-amber-700'}">${c.entregados}/${c.docentes.length} entregadas</span></div>
+        ${r.puedeEditar ? `<button onclick="quitarCoord('${esc(c.id)}')" class="btn btn-sec py-0.5">Quitar</button>` : ''}</div>
+      <table class="w-full planilla text-[11px] mt-1"><thead class="bg-slate-50"><tr><th class="text-left">Docente</th><th class="text-left">Asignaturas / cursos</th><th>Estado</th><th class="text-left">Archivos</th></tr></thead><tbody>
+      ${c.docentes.map(d => `<tr><td style="text-align:left">${esc(d.nombre)}</td><td style="text-align:left">${d.clases.map(esc).join('<br>')}</td><td>${d.entregas.length ? '✅ Entregada' : '⏳ Pendiente'}</td>
+        <td style="text-align:left">${d.entregas.map(e => `<a href="${esc(e.url)}" target="_blank" class="text-sky-700 underline">${esc(e.archivo)}</a> <small>(${esc(e.fecha)})</small>`).join('<br>')}</td></tr>`).join('') || '<tr><td colspan="4" class="text-slate-400">Ningún docente coincide con el área / subnivel.</td></tr>'}</tbody></table></div>`).join('')
+      : '<p class="text-slate-400">Aún no hay coordinadores asignados.</p>';
+  } catch (e) { $('co-area').textContent = e.message; }
+}
+async function guardarCoord() {
+  const x = { idDocente: $('co-doc').value, area: $('co-are').value, subnivel: $('co-sub').value, jornada: $('co-jor').value, carpeta: $('co-car').value, fechaLimite: $('co-lim').value };
+  await run(async () => { const r = await apiT('apiGuardarCoordinador', x); toast(r.mensaje, 'ok'); cargarCoord(); });
+}
+async function quitarCoord(id) { if (!confirm('¿Quitar esta coordinación? Los archivos subidos se conservan.')) return; await run(async () => { const r = await apiT('apiQuitarCoordinador', id); toast(r.mensaje, 'ok'); cargarCoord(); }); }
+
+// ---- Docente coordinador: subir planificaciones ----
+async function cargarPlanif() {
+  await run(async () => {
+    const l = S.misCoord = await apiT('apiMisCoordinaciones');
+    $('pf-area').innerHTML = l.length ? l.map((c, ci) => `<div class="card space-y-2"><div class="font-black text-xs">📂 ${esc(c.texto)}${c.fechaLimite ? ' · fecha límite ' + esc(c.fechaLimite) : ''} · <span class="${c.entregados === c.docentes.length ? 'text-emerald-700' : 'text-amber-700'}">${c.entregados}/${c.docentes.length} docentes con planificación</span></div>
+      <div class="overflow-x-auto border rounded-2xl"><table class="w-full planilla text-[11px]"><thead class="bg-orange-50"><tr><th class="text-left">Docente</th><th class="text-left">Asignaturas / cursos</th><th class="text-left">Archivos subidos</th><th>Subir</th></tr></thead><tbody>
+      ${c.docentes.map((d, di) => `<tr><td style="text-align:left" class="font-semibold">${esc(d.nombre)}</td><td style="text-align:left">${d.clases.map(esc).join('<br>')}</td>
+        <td style="text-align:left">${d.entregas.map(e => `<a href="${esc(e.url)}" target="_blank" class="text-sky-700 underline">${esc(e.archivo)}</a> <small>(${esc(e.fecha)})</small>`).join('<br>') || '<span class="text-amber-700">⏳ Pendiente</span>'}</td>
+        <td><input type="file" id="pf-f-${ci}-${di}" class="text-[10px] max-w-[180px]"><button onclick="subirPlanif(${ci},${di})" class="btn btn-warn py-0.5 mt-1">📤 Subir</button></td></tr>`).join('') || '<tr><td colspan="4" class="text-slate-400">Ningún docente coincide con su área / subnivel.</td></tr>'}</tbody></table></div></div>`).join('')
+      : '<div class="card text-xs text-slate-500">No tiene coordinaciones asignadas.</div>';
+  });
+}
+async function subirPlanif(ci, di) {
+  const c = S.misCoord[ci], d = c.docentes[di], f = $('pf-f-' + ci + '-' + di).files[0];
+  if (!f) return toast('Seleccione el archivo.', 'err');
+  if (f.size > 10 * 1024 * 1024) return toast('El archivo supera 10 MB.', 'err');
+  const datos = await new Promise((ok, err) => { const rd = new FileReader(); rd.onload = () => ok(String(rd.result).split(',')[1]); rd.onerror = err; rd.readAsDataURL(f); });
+  await run(async () => { const r = await apiT('apiSubirPlanificacion', c.id, d.id, { nombre: f.name, mime: f.type, datos }); toast(r.mensaje, 'ok'); cargarPlanif(); });
+}
+
+// ---- Cronograma escolar (vinculado) ----
+S.crVista = 'mes'; S.crFecha = null;
+const ymdC = dt => dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+const parseC = y => { const [a, m, d] = y.split('-').map(Number); return new Date(a, m - 1, d); };
+const MESES_C = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const DIAS_C = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+async function cargarCrono(forzar) {
+  if (S.crono && !forzar) return crPintar();
+  await run(async () => {
+    const r = S.crono = await apiT('apiCronograma');
+    if (!S.crFecha) S.crFecha = ymdC(new Date());
+    const areas = [...new Set(r.actividades.concat(r.semanal).map(a => a.area).filter(Boolean))].sort();
+    $('cr-area').innerHTML = '<option value="">Todas las áreas</option>' + areas.map(a => `<option>${esc(a)}</option>`).join('');
+    $('cr-ley').innerHTML = r.tipos.map(t => `<span class="px-2 py-0.5 rounded-full font-bold" style="background:${esc(t.color)}33;border:1px solid ${esc(t.color)}">${esc(t.nombre)}${t.sinClases ? ' · sin clases' : ''}</span>`).join('');
+    $('cr-b-mail').classList.toggle('hidden', !r.puedeCorreo);
+    $('cr-info').textContent = 'Se toma del sistema del cronograma (solo lectura) · leído: ' + r.leido;
+    crPintar();
+  });
+}
+function crVista(v) { S.crVista = v; crPintar(); }
+function crHoy() { S.crFecha = ymdC(new Date()); crPintar(); }
+function crMover(n) {
+  const d = parseC(S.crFecha);
+  if (S.crVista === 'mes') d.setMonth(d.getMonth() + n, 1);
+  else if (S.crVista === 'sem') d.setDate(d.getDate() + 7 * n);
+  else { const ps = crPeriodos(), i = ps.findIndex(p => p.id === $('cr-per').value); const q = ps[Math.min(ps.length - 1, Math.max(0, i + n))]; if (q) { $('cr-per').value = q.id; S.crFecha = q.inicio; return crPintar(); } }
+  S.crFecha = ymdC(d); crPintar();
+}
+function crPeriodos() {
+  const ps = (S.crono || {}).periodos || [], hoy = S.crFecha, act = ps.find(p => p.inicio <= hoy && hoy <= p.fin) || ps[ps.length - 1];
+  return act && act.anio ? ps.filter(p => p.anio === act.anio) : ps;
+}
+function crActs(desde, hasta, conSemanal) {
+  const r = S.crono, a = $('cr-area').value;
+  return r.actividades.concat(conSemanal ? r.semanal : []).filter(x => x.fin >= desde && x.inicio <= hasta && (!a || x.area === a)).sort((x, y) => x.inicio.localeCompare(y.inicio));
+}
+const crTipo = id => (S.crono.tipos.find(t => t.id === id) || { nombre: '', color: '#94a3b8' });
+function crInfo(i) {
+  const x = S.crLista[i], t = crTipo(x.tipo);
+  $('mi-cont').innerHTML = `<h3 class="font-black text-sm" style="border-left:6px solid ${esc(t.color)};padding-left:6px">${esc(x.titulo)}</h3>
+    <div><b>Fecha:</b> ${esc(x.inicio)}${x.fin !== x.inicio ? ' al ' + esc(x.fin) : ''}</div>${t.nombre ? `<div><b>Tipo:</b> ${esc(t.nombre)}</div>` : ''}${x.responsable ? `<div><b>Responsable:</b> ${esc(x.responsable)}</div>` : ''}${x.area ? `<div><b>Área:</b> ${esc(x.area)}</div>` : ''}${x.obs ? `<div><b>Observaciones:</b> ${esc(x.obs)}</div>` : ''}`;
+  abrirModal('m-info');
+}
+function crRango() {
+  const d = parseC(S.crFecha);
+  if (S.crVista === 'mes') return [ymdC(new Date(d.getFullYear(), d.getMonth(), 1)), ymdC(new Date(d.getFullYear(), d.getMonth() + 1, 0))];
+  if (S.crVista === 'sem') { const l = new Date(d); l.setDate(d.getDate() - ((d.getDay() + 6) % 7)); const v = new Date(l); v.setDate(l.getDate() + 4); return [ymdC(l), ymdC(v)]; }
+  const p = crPeriodos().find(x => x.id === $('cr-per').value) || crPeriodos().find(x => x.inicio <= S.crFecha && S.crFecha <= x.fin) || crPeriodos()[0];
+  return p ? [p.inicio, p.fin, p] : [S.crFecha, S.crFecha];
+}
+function crPintar() {
+  if (!S.crono) return;
+  ['mes', 'tri', 'sem'].forEach(v => $('cr-b-' + v).className = 'btn py-1 ' + (S.crVista === v ? 'btn-primary' : 'btn-sec'));
+  $('cr-per').classList.toggle('hidden', S.crVista !== 'tri');
+  if (S.crVista === 'tri') { const ps = crPeriodos(), v = $('cr-per').value; $('cr-per').innerHTML = ps.map(p => `<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join(''); const ac = ps.find(p => p.id === v) || ps.find(p => p.inicio <= S.crFecha && S.crFecha <= p.fin) || ps[0]; if (ac) $('cr-per').value = ac.id; }
+  const [desde, hasta, per] = crRango(), lista = S.crLista = crActs(desde, hasta, S.crVista === 'sem');
+  const sinCl = y => lista.some(x => x.inicio <= y && y <= x.fin && crTipo(x.tipo) && (S.crono.tipos.find(t => t.id === x.tipo) || {}).sinClases);
+  const chip = (x, i) => `<button class="cr-act" style="background:${esc(crTipo(x.tipo).color)}33;border-left:3px solid ${esc(crTipo(x.tipo).color)}" title="${esc(x.titulo + (x.responsable ? ' · ' + x.responsable : ''))}" onclick="crInfo(${i})">${esc(x.titulo)}</button>`;
+  if (S.crVista === 'mes') {
+    const d0 = parseC(desde); $('cr-tit').textContent = MESES_C[d0.getMonth()].toUpperCase() + ' ' + d0.getFullYear();
+    const pre = (d0.getDay() + 6) % 7, dias = parseC(hasta).getDate(); let h = DIAS_C.map(x => `<div class="text-center font-black text-[10px] text-slate-500">${x}</div>`).join('');
+    for (let i = 0; i < pre; i++) h += '<div></div>';
+    for (let n = 1; n <= dias; n++) { const y = ymdC(new Date(d0.getFullYear(), d0.getMonth(), n)); const hoy = y === ymdC(new Date());
+      h += `<div class="cr-dia" style="${sinCl(y) ? 'background:#f1f5f9' : ''}${hoy ? ';outline:2px solid #0369a1' : ''}"><div class="font-black">${n}</div>${lista.map((x, i) => x.inicio <= y && y <= x.fin ? chip(x, i) : '').join('')}</div>`; }
+    $('cr-area-v').innerHTML = `<div class="cr-mes">${h}</div>`;
+  } else if (S.crVista === 'sem') {
+    $('cr-tit').textContent = 'Semana del ' + desde.split('-').reverse().join('/') + ' al ' + hasta.split('-').reverse().join('/');
+    let h = ''; for (let n = 0; n < 5; n++) { const dt = parseC(desde); dt.setDate(dt.getDate() + n); const y = ymdC(dt);
+      const del = lista.map((x, i) => [x, i]).filter(([x]) => x.inicio <= y && y <= x.fin);
+      h += `<div class="border rounded-2xl p-2 ${sinCl(y) ? 'bg-slate-100' : 'bg-white'}"><div class="font-black text-xs mb-1">${DIAS_C[n]} ${dt.getDate()} de ${MESES_C[dt.getMonth()]}</div>${del.map(([x, i]) => `<div class="mb-1 rounded-lg p-1.5" style="background:${esc(crTipo(x.tipo).color)}22;border-left:4px solid ${esc(crTipo(x.tipo).color)}">
+        <button class="font-bold text-left" onclick="crInfo(${i})">${esc(x.titulo)}</button>${x.responsable ? `<div class="text-[10px]">👤 ${esc(x.responsable)}</div>` : ''}${x.obs ? `<div class="text-[10px] text-slate-700"><b>Observaciones:</b> ${esc(x.obs)}</div>` : ''}</div>`).join('') || '<div class="text-[10px] text-slate-400">Sin actividades</div>'}</div>`; }
+    $('cr-area-v').innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-5 gap-2 text-[11px]">${h}</div>`;
+  } else {
+    $('cr-tit').textContent = (per ? per.nombre + ' · ' : '') + desde.split('-').reverse().join('/') + ' al ' + hasta.split('-').reverse().join('/');
+    const porMes = {}; lista.forEach((x, i) => { const m = x.inicio.slice(0, 7) < desde.slice(0, 7) ? desde.slice(0, 7) : x.inicio.slice(0, 7); (porMes[m] = porMes[m] || []).push([x, i]); });
+    $('cr-area-v').innerHTML = Object.keys(porMes).sort().map(m => { const [a, mm] = m.split('-'); return `<div class="mb-2"><div class="font-black text-xs bg-slate-100 rounded-lg px-2 py-1">${MESES_C[Number(mm) - 1].toUpperCase()} ${a}</div>
+      <table class="w-full planilla text-[11px]"><tbody>${porMes[m].map(([x, i]) => `<tr><td style="width:150px">${esc(x.inicio.split('-').reverse().join('/'))}${x.fin !== x.inicio ? ' – ' + esc(x.fin.split('-').reverse().join('/')) : ''}</td><td style="text-align:left"><button class="font-bold text-left" onclick="crInfo(${i})">${esc(x.titulo)}</button></td>
+        <td><span class="px-2 rounded-full" style="background:${esc(crTipo(x.tipo).color)}33">${esc(crTipo(x.tipo).nombre)}</span></td><td style="text-align:left">${esc(x.responsable)}</td></tr>`).join('')}</tbody></table></div>`; }).join('') || '<p class="text-slate-400 text-xs">Sin actividades en este periodo.</p>';
+  }
+}
+function crTabla() {
+  const [desde, hasta] = crRango(), l = crActs(desde, hasta, S.crVista === 'sem');
+  return { desde, hasta, filas: l.map(x => [x.inicio, x.fin, x.titulo, crTipo(x.tipo).nombre, x.responsable, x.area].concat(S.crVista === 'sem' ? [x.obs] : [])) };
+}
+function crImprimir() {
+  const t = crTabla(), cab = ['Inicio', 'Fin', 'Actividad', 'Tipo', 'Responsable', 'Área'].concat(S.crVista === 'sem' ? ['Observaciones'] : []);
+  mostrarReporte({ tipo: 'html', titulo: 'Cronograma escolar', sub: $('cr-tit').textContent, inst: S.cat.inst, params: S.cat.params, emitido: S.cat.hoy, emisor: S.ses.nombre, filtros: {},
+    html: `<table><thead><tr>${cab.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${t.filas.map(f => `<tr>${f.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('') || '<tr><td colspan="7">Sin actividades.</td></tr>'}</tbody></table>` });
+}
+function crExcel() {
+  if (typeof XLSX === 'undefined') return toast('No se pudo cargar el generador de Excel.', 'err');
+  const t = crTabla(), cab = ['Inicio', 'Fin', 'Actividad', 'Tipo', 'Responsable', 'Área'].concat(S.crVista === 'sem' ? ['Observaciones'] : []);
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([cab].concat(t.filas)), 'Cronograma'); XLSX.writeFile(wb, 'Cronograma_' + t.desde + '_' + t.hasta + '.xlsx');
+}
+function crCorreo() {
+  const [desde, hasta] = crRango(); $('cm-desde').value = desde; $('cm-hasta').value = hasta;
+  $('cm-sel').innerHTML = (S.crono.docentes || []).map(d => `<label class="flex items-center gap-1 ${d.correo ? '' : 'text-slate-400'}"><input type="checkbox" class="cm-d" value="${esc(d.id)}" ${d.correo ? '' : 'disabled'}> ${esc(d.nombre)}${d.correo ? '' : ' (sin correo)'}</label>`).join('');
+  abrirModal('m-crmail');
+}
+async function enviarCrono() {
+  const dest = document.querySelector('input[name="cm-dest"]:checked').value;
+  const x = { asunto: $('cm-asu').value, texto: $('cm-txt').value, destino: dest, jornada: $('cm-jor').value, ids: [...document.querySelectorAll('.cm-d:checked')].map(c => c.value), incluir: $('cm-inc').checked, desde: $('cm-desde').value, hasta: $('cm-hasta').value };
+  if (dest === 'SEL' && !x.ids.length) return toast('Marque al menos un docente.', 'err');
+  if (!confirm('¿Enviar el correo?')) return;
+  await run(async () => { const r = await apiT('apiEnviarCronograma', x); toast(r.mensaje, 'ok'); cerrarModal('m-crmail'); });
+}
+
 // ---- v4.22: casillas registradas por otro docente (cambio de docente): se muestran en gris y no se modifican ----
 function bloquearAjenas(fn, d) {
   const L = (d && d.estudiantes) || [], A = $('pl-area'); if (!A || !L.length) return;
@@ -2046,9 +2505,9 @@ function bloquearAjenas(fn, d) {
   });
   if (n && !A.querySelector('.aviso-ajenas')) A.insertAdjacentHTML('afterbegin', '<div class="aviso-ajenas text-[11px] mb-2 bg-slate-100 border rounded-xl p-2">🔒 Las casillas en gris fueron registradas por otro docente y no se pueden modificar; puede llenar las vacías. Si hay un error, lo corrige Vicerrectorado o Rectorado.</div>');
 }
-['renderFormativa', 'renderSumativa', 'renderRefuerzo', 'renderInicial', 'renderCualitativa', 'renderProyecto'].forEach(fn => {
+['renderFormativa', 'renderSumativa', 'renderRefuerzo', 'renderInicial', 'renderCualitativa', 'renderProyecto', 'renderTrans'].forEach(fn => {
   const f = window[fn]; if (typeof f !== 'function') return;
-  window[fn] = function (d) { const r = f.apply(this, arguments); try { bloquearAjenas(fn, d); } catch (e) { console.log(e); } return r; };
+  window[fn] = function (d) { const r = f.apply(this, arguments); try { bloquearAjenas(fn, d); } catch (e) { console.log(e); } try { colapsarAyuda(); } catch (e) { console.log(e); } return r; };
 });
 // ---- v4.22: correcciones (Vicerrectorado de la jornada del estudiante / Rectorado) ----
 function iniCorrecciones() { }
@@ -2383,20 +2842,20 @@ async function iniConsulta() {
   } catch (e) { toast(e.message, 'err'); }
 }
 async function consultarDocentes(modo) {
-  const f = { jornada: $('cs-jor').value, nivel: $('cs-niv').value, grado: $('cs-gra').value, paralelo: $('cs-par').value, comision: $('cs-com').value, tutor: $('cs-tut').value };
+  const f = { jornada: $('cs-jor').value, nivel: $('cs-niv').value, area: $('cs-are').value, grado: $('cs-gra').value, paralelo: $('cs-par').value, comision: $('cs-com').value, tutor: $('cs-tut').value };
   await run(async () => {
     const r = await apiT('apiReporte', 'docentes', f);
     if (modo === 'imprimir') return mostrarReporte(r);
     if (modo === 'excel') {
       if (typeof XLSX === 'undefined') return toast('No se pudo cargar el generador de Excel.', 'err');
       const filas = [['N°', 'Docente', 'Cédula', 'Correo', 'Jornada', 'Tutoría', 'Clases (curso · asignatura)', 'Comisiones', 'Carga horaria total']]
-        .concat(r.filas.map((x, i) => [i + 1, x.docente, x.cedula, x.correo, x.jornada, x.tutor, x.clases.join('\n'), x.comisiones.join('\n'), x.total]));
+        .concat(r.filas.map((x, i) => [i + 1, x.docente, x.cedula, x.correo, x.jornada, x.tutor, (x.porJornada && x.porJornada.length ? x.porJornada.map(j => j.jornada + (j.horas ? ' (' + j.horas + ' h)' : '') + ': ' + j.clases.join('; ')).join('\n') : x.clases.join('\n')), x.comisiones.join('\n'), x.total]));
       const ws = XLSX.utils.aoa_to_sheet(filas); ws['!cols'] = [5, 30, 12, 26, 11, 12, 50, 40, 10].map(w => ({ wch: w }));
       const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Docentes'); XLSX.writeFile(wb, 'Docentes_consulta.xlsx'); return;
     }
     $('cs-area').innerHTML = `<p class="text-[11px] font-bold">${r.filas.length} docente(s) encontrados.</p>
       <div class="overflow-x-auto border rounded-2xl"><table class="w-full planilla"><thead class="bg-sky-50"><tr><th>N°</th><th class="text-left">Docente</th><th>Jornada</th><th>Tutoría</th><th class="text-left">Clases</th><th class="text-left">Comisiones</th><th>Horas</th></tr></thead><tbody>
-      ${r.filas.map((x, i) => `<tr><td>${i + 1}</td><td style="text-align:left">${esc(x.docente)}</td><td>${esc(x.jornada)}</td><td>${esc(x.tutor)}</td><td style="text-align:left" class="text-[11px]">${x.clases.map(esc).join('<br>') || '—'}</td><td style="text-align:left" class="text-[11px]">${x.comisiones.map(esc).join('<br>') || '—'}</td><td class="font-bold">${x.total}</td></tr>`).join('') || '<tr><td colspan="7" class="text-slate-400 py-3">Ningún docente cumple los filtros.</td></tr>'}</tbody></table></div>`;
+      ${r.filas.map((x, i) => `<tr><td>${i + 1}</td><td style="text-align:left">${esc(x.docente)}</td><td>${esc(x.jornada)}</td><td>${esc(x.tutor)}</td><td style="text-align:left" class="text-[11px]">${clasesJor(x)}</td><td style="text-align:left" class="text-[11px]">${x.comisiones.map(esc).join('<br>') || '—'}</td><td class="font-bold">${x.total}</td></tr>`).join('') || '<tr><td colspan="7" class="text-slate-400 py-3">Ningún docente cumple los filtros.</td></tr>'}</tbody></table></div>`;
   });
 }
 function ofertaDe(j) { return (S.oferta || []).filter(o => o.jornada === j); }
@@ -3139,7 +3598,7 @@ function plCambio(cargar) {
   else if (tipoA === 'OVP') subs = [['ovp', '🧭 Orientación Vocacional y Profesional (cualitativa)']];
   else if (tipoA === 'OPTATIVA') subs = [['opt', /PPE|participaci[oó]n estudiantil/i.test(asig) ? '🙋 Participación Estudiantil (registro interno, no va a la boleta)' : '🎨 Optativa – evaluación cualitativa (no se promedia)']];
   else {
-    subs = [['form', '📝 Insumos formativos (corte)'], ['ref', '🩹 Refuerzo pedagógico (alertas)']];
+    subs = [['form', '📝 Insumos formativos (corte)'], ['ref', '🩹 Refuerzos de estudiantes con alerta temprana']];
     // v4.18: Programa Piloto CNC – la sumativa es el proyecto interdisciplinario
     if (S.cat.params.piloto) subs.push(['proy', '🧩 Proyecto interdisciplinario (trimestre)']);
     else if (!esElementalSinSum(g)) subs.push(['sum', '🎯 Evaluación sumativa y mejora (trimestre)']);
@@ -3178,6 +3637,7 @@ function plCambio(cargar) {
   if (tutor && pf.ovpDelTutor && tipoA !== 'OVP' && [8, 9, 10].includes(ordenG(g))) inf.push(['cual:OVP', '🧭 Informe de Orientación Vocacional', 'btn-ok']);
   $('pl-informes').innerHTML = inf.map(i => `<button onclick="${i[0].startsWith('obs:') ? `abrirObservaciones('${i[0].slice(4)}')` : (i[0].startsWith('cual:') ? `informeCual('${i[0].slice(5)}')` : (i[0] === 'varias' ? 'abrirVarias()' : (i[0].startsWith('curso:') ? `consultaCursoDoc(${i[0] === 'curso:A'})` : `informeDocente('${i[0]}')`)))}" class="btn ${i[2]}">${i[1]}</button>`).join('')
     + '<p class="w-full text-[11px] text-slate-500">Las boletas de calificaciones las emite Rectorado.</p>';
+  S.plSubs = subs; S.plInf = inf; try { pintarMenuDoc(); } catch (e) { console.log(e); } // v4.26
   avisoDistributivo();
   if (cargar) plCargar();
 }
@@ -3383,8 +3843,8 @@ function renderFormativa(d) {
   let th = `<tr><th colspan="2"></th>${antes.map(c => `<th colspan="${c.maxIns + 1}" style="background:${colorCorte(c.orden)}">${esc(c.nombre)} <small>(${esc(c.estado || '')}, solo ver)</small></th>`).join('')}
     <th colspan="${MI + 6}" style="background:${cAct}">${esc(act.nombre || d.periodo.nombre)} <small>(se edita aquí)</small></th>${despues.map(c => `<th colspan="${c.maxIns + 1}" style="background:${colorCorte(c.orden)}">${esc(c.nombre)} <small>(${esc(c.estado || '')})</small></th>`).join('')}<th colspan="3"></th></tr>`;
   th += '<tr><th>N°</th><th class="text-left min-w-[170px]">Estudiante</th>' + antes.map(thOtro).join('');
-  for (let k = 1; k <= NI; k++) th += `<th style="background:${cAct}${k > MI ? ';display:none' : ''}">I${k}</th>`;
-  th += `<th style="background:${cAct}">Total insumos</th><th style="background:${cAct}">Prom. sin refuerzo</th><th style="background:${cAct}">Prom. formativo del corte</th><th style="background:${cAct}">Equivalencia</th><th style="background:${cAct}">% bajos</th><th style="background:${cAct}">Alerta</th>` +
+  for (let k = 1; k <= NI; k++) { const ds = (d.desc || {})[k]; th += `<th data-desck="${k}" style="background:${cAct}${k > MI ? ';display:none' : ''}" class="cursor-pointer" onclick="descInsumo(${k})" title="${esc(ds ? [ds.tema, ds.tipo, ds.fecha].filter(Boolean).join(' · ') : 'Clic para describir de qué trata este insumo')}">I${k}${ds && ds.tema ? `<div class="text-[8px] font-normal text-sky-900 max-w-[72px] truncate mx-auto">${esc(ds.tema)}</div>` : '<div class="text-[8px] font-normal text-slate-400">✎</div>'}</th>`; }
+  th += `<th style="background:${cAct}">Total insumos</th><th style="background:${cAct}">Prom. sin refuerzo</th><th style="background:${cAct}">Prom. formativo del corte</th><th style="background:${cAct};display:none">Equivalencia</th><th style="background:${cAct};display:none">% bajos</th><th style="background:${cAct}">Alerta</th>` +
     despues.map(thOtro).join('') + '<th>Prom. insumos del trimestre (guardado)</th><th>Padres</th><th>Drive</th></tr>';
   const nCols = 2 + antes.concat(despues).reduce((a, c) => a + c.maxIns + 1, 0) + NI + 9;
   let rows = '';
@@ -3398,7 +3858,7 @@ function renderFormativa(d) {
     });
     const c = e.com || {};
     rows += `<tr data-row="${i}"><td>${i + 1}</td><td class="font-semibold">${esc(e.nombres)}</td>${antes.map(c => tdOtro(c, e)).join('')}${cells}
-      <td id="tot-${i}" class="font-bold"></td><td id="pin-${i}" class="font-bold"></td><td id="pro-${i}" class="font-bold"></td><td id="eq-${i}" class="text-[10px] font-bold text-sky-900"></td><td id="pct-${i}"></td><td id="al-${i}"></td>${despues.map(c => tdOtro(c, e)).join('')}<td class="font-black">${f2(e.promTrim)}</td>
+      <td id="tot-${i}" class="font-bold"></td><td id="pin-${i}" class="font-bold"></td><td id="pro-${i}" class="font-bold"></td><td id="eq-${i}" class="text-[10px] font-bold text-sky-900" style="display:none"></td><td id="pct-${i}" style="display:none"></td><td id="al-${i}"></td>${despues.map(c => tdOtro(c, e)).join('')}<td class="font-black">${f2(e.promTrim)}</td>
       <td><button type="button" id="bc-${i}" onclick="$('com-${i}').classList.toggle('hidden')" class="btn btn-sec py-1">${c.informado ? '✅' : '📞'}</button></td>${celdaGrab(i, e.fecha)}</tr>
       <tr id="com-${i}" class="hidden bg-sky-50"><td></td><td colspan="${nCols}" style="text-align:left">
         <div class="flex flex-wrap gap-2 items-end text-xs py-1">
@@ -3496,12 +3956,12 @@ function renderSumativa(d) {
     <td title="${esc(usoTxt(e.uso))}"><label class="lblref hidden" id="sml-${i}"><input type="checkbox" id="sm-${i}" ${e.aplicaMejora ? 'checked' : ''} ${disM}><span id="smt-${i}">Mejora</span></label>
         <input class="nota ref ${e.aplicaMejora ? '' : 'hidden'}" id="sv-${i}" value="${esc(e.mejora)}" ${disM} placeholder="Nueva">
         <span id="smn-${i}" class="text-[9px] text-slate-400">—</span></td>
-    <td id="sef-${i}"></td><td id="sps-${i}"></td><td id="snt-${i}" class="font-black"></td><td id="seq-${i}" class="text-[10px] font-bold text-sky-900"></td>${celdaGrab(i, e.fecha)}</tr>`).join('');
+    <td id="sef-${i}"></td><td id="sps-${i}"></td><td id="snt-${i}" class="font-black"></td><td id="seq-${i}" class="text-[10px] font-bold text-sky-900" style="display:none"></td>${celdaGrab(i, e.fecha)}</tr>`).join('');
   $('pl-area').innerHTML = `<div class="text-[11px] text-slate-600 mb-2 bg-slate-50 border rounded-xl p-2 space-y-0.5">
       <div>Nota trimestral = ${P.pf}% promedio formativo del trimestre + ${P.ps}% evaluación sumativa (Art. 36). Truncamiento a 2 decimales (Art. 8).</div>
       <div><b>Mejora de la sumativa (Art. 11-13)</b>${d.conMejora ? '' : ' — no aplica en este subnivel'}: sumativa mayor a 7,00 y menor a 9,00 → <b>mejora directa</b> (se promedia, máx. ${f2(P.topeMejDir)}; ${P.maxDirAsig} por asignatura y ${P.maxDirTotal} en el año). Sumativa de 0,01 a 6,99 → <b>mejora con refuerzo</b> (se promedia, máx. ${f2(P.topeMejRef)}; ${P.maxRefAsig} por asignatura y ${P.maxRefTotal} en el año). Con 7,00 exacto o 9,00 o más no hay mejora. La mejora nunca baja la nota inicial.</div></div>
     <div class="overflow-x-auto border rounded-2xl"><table class="w-full planilla"><thead class="bg-slate-100"><tr>
-      <th>N°</th><th class="text-left">Estudiante</th><th>Insumos del trimestre</th><th>Prom. formativo</th><th>Formativo (${P.pf}%)</th><th>Sumativa</th><th>Mejora</th><th>Sumativa efectiva</th><th>Sumativo (${P.ps}%)</th><th>Nota trimestral</th><th>Equivalencia</th><th>Drive</th>
+      <th>N°</th><th class="text-left">Estudiante</th><th>Insumos del trimestre</th><th>Prom. formativo</th><th>Formativo (${P.pf}%)</th><th>Sumativa</th><th>Mejora</th><th>Sumativa efectiva</th><th>Sumativo (${P.ps}%)</th><th>Nota trimestral</th><th style="display:none">Equivalencia</th><th>Drive</th>
     </tr></thead><tbody>${rows}</tbody></table></div>`;
   $('pl-area').oninput = $('pl-area').onchange = ev => {
     const m = String(ev.target.id).match(/^s[smv]-(\d+)$/); if (!m) return;
@@ -3781,12 +4241,15 @@ function mostrarReporte(r) {
       tabla(['N°', 'Estudiante', 'Curso', 'Asignatura', 'Trim.', 'Tipo', 'Nota inicial', 'Solicitado por', 'Autorizado por', 'Estado', 'Evaluación', 'Nota mejorada'],
         r.filas.map((m, n) => `<tr><td class="c">${n + 1}</td><td>${esc(m.estudiante)}</td><td>${esc(m.grado + ' ' + m.paralelo + ' ' + m.jornada)}</td><td>${esc(m.asignatura)}</td><td class="c">${esc(m.trimestre)}</td><td>${m.tipo === 'DIRECTA' ? 'Directa' : 'Con refuerzo'}</td><td class="c">${f2(m.notaInicial)}</td><td>${esc(m.solicitadoPor + ' (' + m.parentesco + ') ' + m.fechaSolicitud)}</td><td>${esc(m.autorizadoPor + ' ' + m.fechaAutorizacion)}</td><td>${esc(m.estado)}</td><td class="c">${f2(m.notaEvaluacion)}</td><td class="c b">${f2(m.notaMejorada)}</td></tr>`)) +
       firmas([[r.inst.rectora, 'Rectora']]);
+  } else if (r.tipo === 'html') { // v4.26: cronograma y registro de aperturas
+    orient = r.orient || 'landscape';
+    h = encabezado(r, r.titulo, r.sub || '') + r.html + (r.firmas ? firmas(r.firmas) : '');
   } else if (r.tipo === 'sabana') {
     // v4.25: SÁBANA DEL TRIMESTRE – un color por corte
     orient = 'landscape';
     const F = r.filtros, conS = !r.sinSumativa, nP = r.piloto ? 'Proyecto' : 'Sumativa';
     const g1 = `<tr><th colspan="2"></th>${r.cortes.map(c => `<th colspan="${c.n + 1}" style="background:${colorCorte(c.orden)}">${esc(c.nombre)}</th>`).join('')}<th colspan="${conS ? 6 : 2}">Trimestre</th></tr>`;
-    const g2 = `<tr><th>N°</th><th>Estudiante</th>${r.cortes.map(c => { let h = ''; for (let k = 1; k <= c.n; k++) h += `<th style="background:${colorCorte(c.orden)}">I${k}</th>`; return h + `<th style="background:${colorCorte(c.orden)}">Prom.</th>`; }).join('')}
+    const g2 = `<tr><th>N°</th><th>Estudiante</th>${r.cortes.map(c => { let h = ''; for (let k = 1; k <= c.n; k++) h += `<th style="background:${colorCorte(c.orden)}">I${k}${c.desc && c.desc[k] && c.desc[k].tema ? '<br><span style="font-weight:normal;font-size:.8em">' + esc(c.desc[k].tema) + '</span>' : ''}</th>`; return h + `<th style="background:${colorCorte(c.orden)}">Prom.</th>`; }).join('')}
       <th>Prom. insumos</th>${conS ? `<th>${r.pf} %</th><th>${nP}</th><th>${r.ps} %</th>` : ''}<th>Nota trimestral</th>${conS ? '<th>Equiv.</th>' : ''}</tr>`;
     const filas = r.filas.map((x, n) => `<tr><td class="c">${n + 1}</td><td>${esc(x.nombres)}</td>${x.cortes.map((c, k) => { const bg = `background:${colorCorte(r.cortes[k].orden)}`;
       return c.ins.map(it => `<td class="c" style="${bg}${it.f !== '' && it.f < r.notaMin ? ';color:#b91c1c' : ''}">${it.f === '' ? '' : (it.r !== '' ? f2(it.f) + '→' + f2(it.ef) : f2(it.f))}</td>`).join('') +
@@ -3806,8 +4269,8 @@ function mostrarReporte(r) {
   } else if (r.tipo === 'docentes') {
     orient = 'landscape';
     const filas = r.filas.map((x, n) => `<tr><td class="c">${n + 1}</td><td>${esc(x.docente)}</td><td>${esc(x.cedula)}</td><td>${esc(x.jornada)}</td><td>${esc(x.tutor)}</td>
-      <td style="font-size:.9em">${x.clases.map(esc).join('<br>') || '—'}</td><td style="font-size:.9em">${x.comisiones.map(esc).join('<br>') || '—'}</td><td class="c b">${x.total}</td></tr>`);
-    const filtro = [F.jornada === 'Ambas' ? 'Todas las jornadas' : 'Jornada ' + F.jornada, F.nivel ? 'Nivel ' + F.nivel : '', F.grado || '', F.paralelo ? 'Paralelo ' + F.paralelo : '', F.tutor === 'SI' ? 'Solo tutores' : (F.tutor === 'NO' ? 'Solo no tutores' : ''), F.comision === '__TODAS__' ? 'Docentes con comisión' : (F.comision ? 'Comisión: ' + F.comision : '')].filter(Boolean).join(' · ');
+      <td style="font-size:.9em">${clasesJor(x)}</td><td style="font-size:.9em">${x.comisiones.map(esc).join('<br>') || '—'}</td><td class="c b">${x.total}</td></tr>`);
+    const filtro = [F.jornada === 'Ambas' ? 'Todas las jornadas' : 'Jornada ' + F.jornada, F.nivel ? 'Nivel ' + F.nivel : '', F.area ? 'Área ' + F.area : '', F.grado || '', F.paralelo ? 'Paralelo ' + F.paralelo : '', F.tutor === 'SI' ? 'Solo tutores' : (F.tutor === 'NO' ? 'Solo no tutores' : ''), F.comision === '__TODAS__' ? 'Docentes con comisión' : (F.comision ? 'Comisión: ' + F.comision : '')].filter(Boolean).join(' · ');
     h = encabezado(r, 'Consulta de docentes', esc(filtro)) + ficha([['Filtro', filtro], ['Docentes', r.filas.length]]) +
       tabla(['N°', 'Docente', 'Cédula', 'Jornada', 'Tutoría', 'Clases (curso · asignatura)', 'Comisiones', 'Carga horaria'], filas) +
       firmas([[r.vicerrector || '', 'Vicerrector/a – Jornada ' + F.jornada, 'ELABORADO'], [r.inst.rectora, 'Rectora', 'APROBADO']]) + norma(r);
