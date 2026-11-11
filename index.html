@@ -113,6 +113,8 @@
   #pl-area table.planilla thead tr:last-child > th:nth-child(2) { z-index: 5; background: #f1f5f9; }
   #pl-barra { position: sticky; top: 0; z-index: 20; background: #fff; padding: 6px 0; border-bottom: 1px solid #e2e8f0; }
   #pl-avisos { display: none; }
+  #pl-corte-info, #pl-subs { display: none !important; } /* v4.26.3: ahora están en el menú superior */
+  .dm-sel { background: #e0f2fe; font-weight: 800; }
   .cambiado { background: #fef9c3 !important; outline: 1px solid #f59e0b; }
   @keyframes parpadeo { 50% { box-shadow: 0 0 0 4px rgba(239,68,68,.45); } }
   .parpadea { animation: parpadeo 1.2s infinite; }
@@ -742,7 +744,8 @@
 
     <!-- PLANILLA DOCENTE -->
     <div id="tab-planilla" class="tab hidden space-y-4">
-      <div class="card py-2 space-y-1"><div class="text-[11px] font-black text-slate-700" id="dm-tit">Sistema de Calificaciones</div><div id="dm-menu" class="flex flex-wrap gap-2 relative z-40"></div></div>
+      <div class="card py-2 space-y-1"><div class="text-[11px] font-black text-slate-700" id="dm-tit">Sistema de Calificaciones</div><div id="dm-menu" class="flex flex-wrap gap-2 relative z-40"></div>
+        <div class="flex flex-wrap gap-x-4 gap-y-1 text-[11px]"><span id="dm-corte" class="font-black"></span><span id="dm-aqui" class="text-slate-600"></span></div></div>
       <div class="card space-y-3">
         <div class="flex flex-wrap justify-between items-center gap-2">
           <div><h3 class="font-black text-sm">📝 Registro de calificaciones</h3>
@@ -1276,7 +1279,7 @@ api('apiInfoPublica').then(i => {
   revisarVersion(i.version);
 }).catch(() => {});
 // ---- v4.20: la página se actualiza sola cuando hay una versión nueva del sistema ----
-const VERSION_CLIENTE = '4.26.2';
+const VERSION_CLIENTE = '4.26.4';
 function revisarVersion(v) {
   if (!v || v === VERSION_CLIENTE || EN_APPS_SCRIPT) return;
   if (S.sucio) return; // nunca se recarga con notas sin guardar
@@ -2186,26 +2189,48 @@ async function activarAutomaticos(area) { await run(async () => { const r = awai
 // ============================================================================
 const AREAS_C = ['Lengua y Literatura', 'Matemática', 'Ciencias Naturales', 'Ciencias Sociales', 'Lengua Extranjera', 'Educación Cultural y Artística', 'Educación Física', 'Módulo interdisciplinar', 'Optativas', 'Inicial y Preparatoria'];
 const SUBN_C = ['Inicial', 'Preparatoria', 'Elemental', 'Media', 'Superior', 'Bachillerato'];
+function infoCortesMenu() {
+  // v4.26.3: estado de cada corte del trimestre elegido (lo que antes mostraba la franja verde)
+  const h = S.cat.hoy, fm = d => d ? d.slice(8, 10) + '/' + d.slice(5, 7) : '', dias = d => Math.round((new Date(d + 'T12:00:00') - new Date(h + 'T12:00:00')) / 86400000);
+  const ps = (S.cat.periodos || []), ops = [...$('pl-corte').options];
+  const cs = ops.map((o, k) => { const p = ps.find(x => x.id === o.value) || {}; let est = 'sin fechas', txt = '';
+    if (p.inicio && p.cierre) { if (h < p.inicio) { est = 'próximo'; txt = ' · abre el ' + fm(p.inicio); } else if (h > p.cierre) { est = 'cerrado'; } else { const n = dias(p.cierre); est = 'abierto'; txt = ' · cierra el ' + fm(p.cierre) + ' (' + (n === 0 ? 'HOY' : n === 1 ? 'mañana' : 'faltan ' + n + ' días') + ')'; } }
+    return { id: o.value, nombre: o.text, n: k + 1, est, txt, dias: p.cierre ? dias(p.cierre) : null }; });
+  return cs;
+}
 function pintarMenuDoc() {
   const subs = S.plSubs || [], has = k => subs.find(x => x[0] === k), acc = S.menuAcc = [], add = f => { acc.push(f); return acc.length - 1; };
-  const it = (t, f) => ({ t, i: add(f) });
+  const it = (t, f, sel) => ({ t, i: add(f), sel });
+  const cs = infoCortesMenu(), ab = cs.find(c => c.est === 'abierto');
+  $('dm-corte').innerHTML = ab ? `<span class="${ab.dias <= 3 ? 'text-red-700 animate-pulse' : 'text-emerald-800'}">⚠️ ${esc(ab.nombre)} de ${cs.length} abierto · ${ab.dias === 0 ? 'HOY se cierra' : ab.dias === 1 ? 'se cierra mañana' : 'faltan ' + ab.dias + ' días'} (cierra el ${esc(ab.txt.match(/\d\d\/\d\d/) ? ab.txt.match(/\d\d\/\d\d/)[0] : '')})</span>`
+    : (cs.length ? '<span class="text-amber-800">📅 No hay un corte abierto hoy (registro de insumos cerrado)</span>' : '');
+  const lbl = (subs.find(x => x[0] === S.sub) || [])[1] || '', cAct = cs.find(c => c.id === $('pl-corte').value);
+  $('dm-aqui').textContent = lbl ? 'Está en: ' + lbl.replace(/^\S+\s/, '') + (S.sub === 'form' && cAct ? ' · ' + cAct.nombre : '') : '';
   const irSub = k => () => { S.sub = k; plCambio(true); };
   const g = [];
   const form = [];
-  if (has('form')) [...$('pl-corte').options].forEach(o => form.push(it('📝 ' + o.text, () => { $('pl-corte').value = o.value; S.sub = 'form'; plCambio(true); })));
-  ['ini', 'ref'].forEach(k => { if (has(k)) form.push(it(has(k)[1], irSub(k))); });
+  if (has('form')) cs.forEach(c => form.push(it('📝 ' + c.nombre + ' · ' + c.est + c.txt, () => { $('pl-corte').value = c.id; S.sub = 'form'; plCambio(true); }, S.sub === 'form' && $('pl-corte').value === c.id)));
+  ['ini', 'ref'].forEach(k => { if (has(k)) form.push(it(has(k)[1], irSub(k), S.sub === k)); });
   if (form.length) g.push({ t: '📘 Insumos formativos', c: '#0369a1', items: form });
-  const sum = ['proy', 'sum', 'trans', 'mej'].filter(has).map(k => it(has(k)[1], irSub(k)));
+  const sum = ['proy', 'sum', 'trans', 'mej'].filter(has).map(k => it(has(k)[1], irSub(k), S.sub === k));
   if (sum.length) g.push({ t: '📕 Insumos sumativos', c: '#7e22ce', items: sum });
-  const tri = ['lec', 'opt', 'ovp', 'aia', 'asis', 'just', 'efb'].filter(has).map(k => it(has(k)[1], irSub(k)));
-  if (has('form')) tri.push(it('🖨️ Sábana del trimestre', () => genSabana()));
+  // v4.26.4: cada opción aparece una sola vez. Lo del tutor va en "⭐ Tutoría"; la asistencia de la clase, en "📅 Asistencia".
+  const esTut = x => ['aia', 'just', 'efb'].includes(x[0]) || /\(tutor\)|sin docente asignado/i.test(x[1]) && x[0] !== 'proy';
+  const tri = subs.filter(x => ['lec', 'opt', 'ovp'].includes(x[0]) && !esTut(x)).map(x => it(x[1], irSub(x[0]), S.sub === x[0]));
+  if (has('form')) tri.push(it('🖨️ Sábana del trimestre (todas las notas del trimestre)', () => genSabana()));
   if (tri.length) g.push({ t: '📗 Trimestre', c: '#15803d', items: tri });
-  const inf = (S.plInf || []).map((x, n) => it(x[1], () => { const b = $('pl-informes').querySelectorAll('button')[n]; if (b) b.click(); }));
+  const asi = subs.filter(x => x[0] === 'asis' && !esTut(x)).map(x => it(x[1], irSub(x[0]), S.sub === x[0]));
+  if (asi.length) g.push({ t: '📅 Asistencia', c: '#b45309', items: asi });
+  const infTut = i => /^cual:(AIA|OVP)$/.test(i[0]);
+  const tut = subs.filter(esTut).map(x => it(x[1], irSub(x[0]), S.sub === x[0]))
+    .concat((S.plInf || []).map((x, n) => [x, n]).filter(([x]) => infTut(x)).map(([x, n]) => it('🖨️ ' + x[1], () => { const b = $('pl-informes').querySelectorAll('button')[n]; if (b) b.click(); })));
+  if (tut.length) g.push({ t: '⭐ Tutoría', c: '#6d28d9', items: tut });
+  const inf = (S.plInf || []).map((x, n) => [x, n]).filter(([x]) => !infTut(x)).map(([x, n]) => it(x[1], () => { const b = $('pl-informes').querySelectorAll('button')[n]; if (b) b.click(); }));
   if (inf.length) g.push({ t: '📄 Informes', c: '#475569', items: inf });
-  if (S.cat.coordinador) g.push({ t: '📤 Subir planificaciones', c: '#c2410c', items: [it('Abrir planificaciones', () => irTab('planif'))] });
+  if (S.cat.coordinador) g.push({ t: '📂 Coordinación', c: '#c2410c', items: [it('📤 Subir planificaciones de mis docentes', () => irTab('planif')), it('✅ Ver qué docentes ya entregaron', () => irTab('planif'))] });
   g.push({ t: '📅 Cronograma escolar', c: '#0e7490', items: [it('Ver cronograma', () => irTab('crono'))] });
   $('dm-menu').innerHTML = g.map((x, n) => `<div class="dm-grupo"><button class="dm-btn" style="background:${x.c}" onclick="dmAbrir(${n}, event)">${x.t} ▾</button>
-    <div class="dm-panel hidden" id="dm-p-${n}">${x.items.map(y => `<button class="dm-item" onclick="dmIr(${y.i})">${esc(y.t)}</button>`).join('')}</div></div>`).join('');
+    <div class="dm-panel hidden" id="dm-p-${n}">${x.items.map(y => `<button class="dm-item ${y.sel ? 'dm-sel' : ''}" onclick="dmIr(${y.i})">${y.sel ? '✔ ' : ''}${esc(y.t)}</button>`).join('')}</div></div>`).join('');
 }
 function dmAbrir(n, ev) { ev.stopPropagation(); document.querySelectorAll('.dm-panel').forEach((p, i) => p.classList.toggle('hidden', i !== n || !p.classList.contains('hidden'))); }
 document.addEventListener('click', () => document.querySelectorAll('.dm-panel').forEach(p => p.classList.add('hidden')));
@@ -3649,6 +3674,7 @@ function banner(d) {
 }
 async function plCargar() {
   if (!seguirSinGuardar()) return restaurarPlanilla();
+  try { if (S.plSubs) pintarMenuDoc(); } catch (e) { /* nada */ } // v4.26.3: el menú marca dónde está
   const c = plCtx(); S.pl.ctx = c; S.pl.sub = S.sub; S.sucio = false;
   const seq = ++S.plSeq, vigente = () => seq === S.plSeq; // solo se muestra la ÚLTIMA carga pedida
   $('pl-area').innerHTML = ''; $('pl-acciones').innerHTML = ''; resumenGrab();
