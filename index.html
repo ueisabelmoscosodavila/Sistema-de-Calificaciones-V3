@@ -153,6 +153,7 @@
       </div>
       <button id="b-pend" onclick="verPendientes()" class="btn btn-sec hidden" title="Sus pendientes">🔔 <span id="b-pend-n" class="font-black"></span></button>
       <button onclick="abrirModal('m-clave')" class="btn btn-sec">🔑 Clave</button>
+      <a id="b-formatos" href="#" target="_blank" rel="noopener" class="btn bg-teal-50 text-teal-800 border border-teal-200 hidden">📁 Formatos institucionales</a>
       <button id="b-cambiarol" onclick="abrirRoles()" class="btn bg-violet-50 text-violet-800 border border-violet-200 hidden">🔄 Cambiar rol</button>
       <button onclick="salir()" class="btn bg-red-50 text-red-700 border border-red-200">Salir</button>
     </div>
@@ -311,16 +312,19 @@
             <button onclick="cargarCrono(true)" class="btn btn-sec py-1" title="Volver a leer">🔄</button>
           </div>
         </div>
-        <div id="cr-ley" class="flex flex-wrap gap-2 text-[10px]"></div>
         <div id="cr-tit" class="font-black text-sm text-center"></div>
         <div id="cr-area-v"></div>
       </div>
     </div>
 
+    <div id="tab-misplan" class="tab hidden space-y-3">
+      <div class="card space-y-2"><h3 class="font-black text-sm">📄 Mis planificaciones</h3>
+        <p class="text-[11px] text-slate-500">Estado de sus planificaciones por trimestre. Solo lectura: no se pueden descargar ni modificar.</p><div id="mp-area"></div></div>
+    </div>
     <!-- PLANIFICACIONES (coordinadores de área / subnivel) -->
     <div id="tab-planif" class="tab hidden space-y-3">
-      <div class="card space-y-1"><h3 class="font-black text-sm">📤 Subir planificaciones</h3>
-        <p class="text-[11px] text-slate-500">Aparecen solo los docentes que usted coordina. Puede subir varios archivos por docente (máximo 10 MB cada uno); se guardan en la carpeta de Drive indicada por Rectorado, en una subcarpeta con el nombre del docente.</p></div>
+      <div class="card space-y-1"><div class="flex flex-wrap justify-between items-center gap-2"><h3 class="font-black text-sm">📤 Subir planificaciones</h3><div><label class="lbl">Trimestre</label><select id="pf-trim" class="inp w-auto" onchange="cargarPlanif()"><option>1</option><option>2</option><option>3</option></select></div></div>
+        <p class="text-[11px] text-slate-500">Suba un archivo PDF, Word (.docx) o Excel (.xlsx) por docente, año y asignatura (máx. 10 MB). La última subida es la vigente. Solo se puede subir con el plazo abierto por Rectorado y mientras Vicerrectorado no la haya aprobado. Los archivos se ven en pantalla, sin descarga.</p></div>
       <div id="pf-area" class="space-y-3"></div>
     </div>
 
@@ -522,11 +526,29 @@
         <div id="co-form" class="hidden grid grid-cols-2 sm:grid-cols-6 gap-2 items-end bg-orange-50 border border-orange-200 rounded-2xl p-3 text-xs">
           <div class="col-span-2"><label class="lbl">Docente coordinador/a</label><select id="co-doc" class="inp"></select></div>
           <div><label class="lbl">Área</label><select id="co-are" class="inp"></select></div>
-          <div><label class="lbl">Subnivel</label><select id="co-sub" class="inp"></select></div>
+          <div><label class="lbl">Subniveles (uno o más)</label><select id="co-sub" class="inp" multiple size="4"></select></div>
+          <div class="col-span-2"><label class="lbl">Docentes adicionales (opcional, uno o más)</label><select id="co-ext" class="inp" multiple size="4"></select></div>
           <div><label class="lbl">Jornada</label><select id="co-jor" class="inp"><option>Ambas</option><option>Matutina</option><option>Vespertina</option></select></div>
           <div><label class="lbl">Fecha límite</label><input id="co-lim" type="date" class="inp"></div>
           <div class="col-span-2 sm:col-span-5"><label class="lbl">Carpeta de Drive (enlace o ID)</label><input id="co-car" class="inp" placeholder="https://drive.google.com/drive/folders/…"></div>
           <button onclick="guardarCoord()" class="btn btn-ok">💾 Asignar</button>
+        </div>
+        <div id="pz-card" class="hidden bg-sky-50 border border-sky-200 rounded-2xl p-3 text-xs space-y-2">
+          <div class="font-black">📅 Plazos de planificaciones por trimestre (Rectorado abre y cierra)</div>
+          <div class="grid grid-cols-2 sm:grid-cols-6 gap-2 items-end">
+            <div><label class="lbl">Trimestre</label><select id="pz-t" class="inp"><option>1</option><option>2</option><option>3</option></select></div>
+            <div><label class="lbl">Jornada</label><select id="pz-j" class="inp"><option>Ambas</option><option>Matutina</option><option>Vespertina</option></select></div>
+            <div><label class="lbl">Inicio (opcional)</label><input id="pz-i" type="date" class="inp"></div>
+            <div><label class="lbl">Fecha límite</label><input id="pz-l" type="date" class="inp"></div>
+            <div><label class="lbl">Estado</label><select id="pz-e" class="inp"><option value="ABIERTO">Abierto</option><option value="CERRADO">Cerrado</option></select></div>
+            <button onclick="guardarPlazo()" class="btn btn-ok">💾 Guardar plazo</button>
+          </div>
+          <div id="pz-lista"></div>
+        </div>
+        <div class="bg-white border rounded-2xl p-3 text-xs space-y-2">
+          <div class="font-black">🔎 Revisión y aprobación de planificaciones (solo lectura)</div>
+          <div class="flex gap-2 items-end"><div><label class="lbl">Trimestre</label><select id="rv-t" class="inp"><option>1</option><option>2</option><option>3</option></select></div><button onclick="cargarRevision()" class="btn btn-primary">🔎 Revisar</button></div>
+          <div id="rv-area"></div>
         </div>
         <div id="co-area" class="text-xs"></div>
       </div>
@@ -820,6 +842,13 @@
   <div class="bg-white max-w-md w-full p-5 rounded-3xl space-y-2 text-xs"><div id="mi-cont"></div><button onclick="cerrarModal('m-info')" class="btn btn-primary w-full">Cerrar</button></div>
 </div>
 <!-- v4.26: CRONOGRAMA POR CORREO -->
+<style>@media print{#vis-c{display:none!important}}</style>
+<div id="m-vis" class="hidden fixed inset-0 bg-slate-900/70 flex items-center justify-center p-2 z-50">
+  <div class="bg-white rounded-2xl w-full max-w-4xl max-h-[95vh] flex flex-col">
+    <div class="flex justify-between items-center p-2 border-b"><b id="vis-t" class="text-xs"></b><button onclick="cerrarModal('m-vis')" class="btn btn-sec py-0.5">✖ Cerrar</button></div>
+    <div id="vis-c" class="overflow-auto p-2" oncontextmenu="return false" style="user-select:none;-webkit-user-select:none"></div>
+  </div>
+</div>
 <div id="m-crmail" class="hidden fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50">
   <div class="bg-white max-w-lg w-full p-5 rounded-3xl space-y-2 text-xs max-h-[90vh] overflow-y-auto">
     <h3 class="font-black text-sm">✉️ Enviar cronograma por correo</h3>
@@ -1389,8 +1418,10 @@ function iniciarApp() {
   $('b-nombre').textContent = S.ses.nombre;
   $('b-rol').textContent = S.ses.cargo + (S.ses.rol === 'DOCENTE' ? ' · ' + S.ses.jornada : '');
   $('b-cambiarol').classList.toggle('hidden', !(S.roles && S.roles.length > 1));
+  { const fm = ((S.cat.params || {}).formatos || '').trim(), esDir = ['RECTORA', 'VICERRECTORA_MATUTINA', 'VICERRECTOR_VESPERTINA'].includes(S.ses.rol); // v4.27: enlace a formatos
+    $('b-formatos').classList.toggle('hidden', !(fm && esDir)); if (fm) $('b-formatos').href = fm; }
   const R = S.ses.rol;
-  let tabs = R === 'DOCENTE' ? [['planilla', '📝 Mis calificaciones']].concat(S.cat.coordinador ? [['planif', '📤 Planificaciones']] : [], [['crono', '📅 Cronograma escolar']])
+  let tabs = R === 'DOCENTE' ? [['planilla', '📝 Mis calificaciones'], ['misplan', '📄 Mis planificaciones']].concat(S.cat.coordinador ? [['planif', '📤 Planificaciones']] : [], [['crono', '📅 Cronograma escolar']])
     : R === 'ADMINISTRADOR' ? [['permisos', '🛡️ Permisos y herramientas'], ['institucion', '🏫 Institución'], ['crono', '📅 Cronograma escolar']]
     : R === 'RECTORA' ? [['estudiantes', '🎒 Estudiantes'], ['docentes', '👨‍🏫 Docentes'], ['optativas', '🎓 Optativas BGU'], ['periodos', '📅 Fechas, cortes y bloqueos'], ['informes', '📊 Informes'], ['seguimiento', '⚠️ Seguimiento y cumplimiento'], ['inasistencias', '🚨 Inasistencias'], ['efb', '🎓 Evaluación final de Bachillerato'], ['malla', '📋 Distributivo'], ['consulta', '📖 Consulta de calificaciones'], ['proyectos', '🧩 Proyectos interdisciplinarios'], ['mejoras', '📝 Mejoras'], ['correcciones', '✏️ Correcciones'], ['cierretrim', '🔒 Cierre de trimestre'], ['institucion', '🏫 Institución'], ['cierre', '🎓 Cierre del año']]
     : esInspeccion() ? [['inasistencias', '🚨 Inasistencias y justificaciones'], ['crono', '📅 Cronograma escolar']]
@@ -1429,7 +1460,7 @@ function aplicarLectura() {
 }
 new MutationObserver(() => { clearTimeout(S._lt); S._lt = setTimeout(aplicarLectura, 30); }).observe(document.body, { childList: true, subtree: true });
 const ON_TAB = {
-  permisos: () => { cargarPermisos(); cargarRespaldos('rs-adm'); iniHistorial(); cargarAdminExtras(); }, crono: () => cargarCrono(), planif: () => cargarPlanif(), cierretrim: () => iniCierreTrim(), consulta: () => iniConsulta2(), proyectos: () => iniProyectos(), mejoras: () => iniMejoras(), correcciones: () => iniCorrecciones(),
+  permisos: () => { cargarPermisos(); cargarRespaldos('rs-adm'); iniHistorial(); cargarAdminExtras(); }, crono: () => cargarCrono(), misplan: () => cargarMisPlan(), planif: () => cargarPlanif(), cierretrim: () => iniCierreTrim(), consulta: () => iniConsulta2(), proyectos: () => iniProyectos(), mejoras: () => iniMejoras(), correcciones: () => iniCorrecciones(),
   estudiantes: () => cargarEstudiantes(), docentes: () => cargarDocentes(), periodos: () => { renderPeriodos(); cargarDesbloqueos(); cargarAperturas(); },
   optativas: () => cargarOptativas(), inasistencias: () => cargarInasistencias(), cierre: () => cargarCierre(), efb: () => iniEFB(), malla: () => iniMalla(), informes: () => { cargarAnios(); infCurso(); }, seguimiento: () => { cumCortes(); cargarCoord(); }, institucion: () => { cargarInstitucion(); if (S.ses.rol === 'ADMINISTRADOR') cargarRespaldos('rs-inst'); if ($('dp-area-r')) $('dp-area-r').innerHTML = ''; }, planilla: () => initPlanilla()
 };
@@ -2228,6 +2259,8 @@ function pintarMenuDoc() {
   const inf = (S.plInf || []).map((x, n) => [x, n]).filter(([x]) => !infTut(x)).map(([x, n]) => it(x[1], () => { const b = $('pl-informes').querySelectorAll('button')[n]; if (b) b.click(); }));
   if (inf.length) g.push({ t: '📄 Informes', c: '#475569', items: inf });
   if (S.cat.coordinador) g.push({ t: '📂 Coordinación', c: '#c2410c', items: [it('📤 Subir planificaciones de mis docentes', () => irTab('planif')), it('✅ Ver qué docentes ya entregaron', () => irTab('planif'))] });
+  g.push({ t: '📄 Mis planificaciones', c: '#0369a1', items: [it('Ver el estado de mis planificaciones', () => irTab('misplan'))] }); // v4.28
+  { const fm = ((S.cat.params || {}).formatos || '').trim(); if (fm) g.push({ t: '📁 Formatos institucionales', c: '#0f766e', items: [it('Abrir los formatos institucionales', () => window.open(fm, '_blank', 'noopener'))] }); } // v4.27
   g.push({ t: '📅 Cronograma escolar', c: '#0e7490', items: [it('Ver cronograma', () => irTab('crono'))] });
   $('dm-menu').innerHTML = g.map((x, n) => `<div class="dm-grupo"><button class="dm-btn" style="background:${x.c}" onclick="dmAbrir(${n}, event)">${x.t} ▾</button>
     <div class="dm-panel hidden" id="dm-p-${n}">${x.items.map(y => `<button class="dm-item ${y.sel ? 'dm-sel' : ''}" onclick="dmIr(${y.i})">${y.sel ? '✔ ' : ''}${esc(y.t)}</button>`).join('')}</div></div>`).join('');
@@ -2365,11 +2398,13 @@ async function enviarPendDoc(todos) {
 async function cargarCoord() {
   try {
     const r = S.coord = await apiT('apiCoordinadores', $('pd-jor') ? $('pd-jor').value : '');
+    cargarPlazos().catch(() => {});
     $('co-form').classList.toggle('hidden', !r.puedeEditar || (S.cat.bloqueos || []).includes('COORDINADORES'));
     if (r.puedeEditar) {
       $('co-doc').innerHTML = opts(r.docentes.map(d => d.id), '', '—'); [...$('co-doc').options].forEach(o => { const d = r.docentes.find(x => x.id === o.value); if (d) o.textContent = d.nombre; });
       $('co-are').innerHTML = '<option value="">(cualquiera)</option>' + r.areas.map(a => `<option>${esc(a)}</option>`).join('');
-      $('co-sub').innerHTML = '<option value="">(cualquiera)</option>' + r.subniveles.map(a => `<option>${esc(a)}</option>`).join('');
+      $('co-sub').innerHTML = r.subniveles.map(a => `<option>${esc(a)}</option>`).join('');
+      $('co-ext').innerHTML = r.docentes.map(d => `<option value="${esc(d.id)}">${esc(d.nombre)}</option>`).join('');
     }
     $('co-area').innerHTML = r.coordinaciones.length ? r.coordinaciones.map(c => `<div class="border rounded-2xl p-2 mb-2">
       <div class="flex flex-wrap justify-between gap-2"><div><b>${esc(c.coordinador)}</b> · ${esc(c.texto)}${c.fechaLimite ? ' · fecha límite ' + esc(c.fechaLimite) : ''} · <span class="font-black ${c.entregados === c.docentes.length ? 'text-emerald-700' : 'text-amber-700'}">${c.entregados}/${c.docentes.length} entregadas</span></div>
@@ -2381,29 +2416,78 @@ async function cargarCoord() {
   } catch (e) { $('co-area').textContent = e.message; }
 }
 async function guardarCoord() {
-  const x = { idDocente: $('co-doc').value, area: $('co-are').value, subnivel: $('co-sub').value, jornada: $('co-jor').value, carpeta: $('co-car').value, fechaLimite: $('co-lim').value };
+  const x = { idDocente: $('co-doc').value, area: $('co-are').value, subnivel: [...$('co-sub').selectedOptions].map(o => o.value), docentesExtra: [...$('co-ext').selectedOptions].map(o => o.value), jornada: $('co-jor').value, carpeta: $('co-car').value, fechaLimite: $('co-lim').value };
   await run(async () => { const r = await apiT('apiGuardarCoordinador', x); toast(r.mensaje, 'ok'); cargarCoord(); });
 }
 async function quitarCoord(id) { if (!confirm('¿Quitar esta coordinación? Los archivos subidos se conservan.')) return; await run(async () => { const r = await apiT('apiQuitarCoordinador', id); toast(r.mensaje, 'ok'); cargarCoord(); }); }
 
-// ---- Docente coordinador: subir planificaciones ----
+// ---- v4.28: planificaciones por trimestre, visor de solo lectura y aprobación ----
+const ESTPL = { PENDIENTE: '⏳ Pendiente', SUBIDA: '📤 Subida', APROBADA: '✅ Aprobada' };
+const cargarLib = src => new Promise((ok, err) => { if (document.querySelector('script[src="' + src + '"]')) return ok(); const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => err(new Error('No se pudo cargar el visor de documentos.')); document.head.appendChild(s); });
+async function verPlan(id) {
+  await run(async () => {
+    const r = await apiT('apiVerPlanificacion', id), c = $('vis-c'), buf = Uint8Array.from(atob(r.datos), x => x.charCodeAt(0));
+    $('vis-t').textContent = r.nombre; c.innerHTML = '<p class="text-xs text-slate-500">Cargando…</p>'; abrirModal('m-vis');
+    if (r.ext === 'pdf') {
+      const base = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/';
+      await cargarLib(base + 'pdf.min.js');
+      if (!window._pdfW) window._pdfW = URL.createObjectURL(new Blob([await (await fetch(base + 'pdf.worker.min.js')).text()], { type: 'text/javascript' }));
+      pdfjsLib.GlobalWorkerOptions.workerSrc = window._pdfW;
+      const pdf = await pdfjsLib.getDocument({ data: buf }).promise; c.innerHTML = '';
+      for (let n = 1; n <= pdf.numPages; n++) { const pg = await pdf.getPage(n), vp = pg.getViewport({ scale: 1.4 }), cv = document.createElement('canvas'); cv.width = vp.width; cv.height = vp.height; cv.style.cssText = 'max-width:100%;display:block;margin:0 auto 8px;border:1px solid #e2e8f0'; c.appendChild(cv); await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise; }
+    } else if (r.ext === 'docx') {
+      await cargarLib('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js'); await cargarLib('https://cdn.jsdelivr.net/npm/docx-preview@0.3.7/dist/docx-preview.min.js');
+      c.innerHTML = ''; await docx.renderAsync(buf, c);
+    } else if (r.ext === 'xlsx') {
+      const wb = XLSX.read(buf, { type: 'array' });
+      c.innerHTML = wb.SheetNames.map(n => '<div class="font-black text-xs mt-2">' + esc(n) + '</div><div class="overflow-x-auto text-[11px] planilla">' + XLSX.utils.sheet_to_html(wb.Sheets[n], { header: '', footer: '' }) + '</div>').join('');
+    } else c.innerHTML = '<p class="text-xs">Este formato no se puede mostrar en pantalla.</p>';
+  });
+}
 async function cargarPlanif() {
   await run(async () => {
-    const l = S.misCoord = await apiT('apiMisCoordinaciones');
-    $('pf-area').innerHTML = l.length ? l.map((c, ci) => `<div class="card space-y-2"><div class="font-black text-xs">📂 ${esc(c.texto)}${c.fechaLimite ? ' · fecha límite ' + esc(c.fechaLimite) : ''} · <span class="${c.entregados === c.docentes.length ? 'text-emerald-700' : 'text-amber-700'}">${c.entregados}/${c.docentes.length} docentes con planificación</span></div>
-      <div class="overflow-x-auto border rounded-2xl"><table class="w-full planilla text-[11px]"><thead class="bg-orange-50"><tr><th class="text-left">Docente</th><th class="text-left">Asignaturas / cursos</th><th class="text-left">Archivos subidos</th><th>Subir</th></tr></thead><tbody>
-      ${c.docentes.map((d, di) => `<tr><td style="text-align:left" class="font-semibold">${esc(d.nombre)}</td><td style="text-align:left">${d.clases.map(esc).join('<br>')}</td>
-        <td style="text-align:left">${d.entregas.map(e => `<a href="${esc(e.url)}" target="_blank" class="text-sky-700 underline">${esc(e.archivo)}</a> <small>(${esc(e.fecha)})</small>`).join('<br>') || '<span class="text-amber-700">⏳ Pendiente</span>'}</td>
-        <td><input type="file" id="pf-f-${ci}-${di}" class="text-[10px] max-w-[180px]"><button onclick="subirPlanif(${ci},${di})" class="btn btn-warn py-0.5 mt-1">📤 Subir</button></td></tr>`).join('') || '<tr><td colspan="4" class="text-slate-400">Ningún docente coincide con su área / subnivel.</td></tr>'}</tbody></table></div></div>`).join('')
+    const pa = (S.cat.periodos || []).find(p => p.tipo === 'TRIMESTRE' && p.estado === 'ABIERTO'), sel = $('pf-trim');
+    if (!sel.dataset.ok) { sel.value = pa ? pa.trimestre : 1; sel.dataset.ok = 1; }
+    const l = S.misCoord = await apiT('apiMisCoordinaciones'), vs = S.pfv = await Promise.all(l.map(c => apiT('apiPlanifCoord', c.id, sel.value)));
+    $('pf-area').innerHTML = vs.length ? vs.map((c, ci) => `<div class="card space-y-2"><div class="font-black text-xs">📂 ${esc(c.texto)} · ${c.trimestre}° trimestre · <span class="${c.abierto ? 'text-emerald-700' : 'text-red-700'}">${c.abierto ? 'plazo abierto hasta ' + esc(c.limite) : 'plazo cerrado: no se puede subir'}</span></div>
+      <div class="overflow-x-auto border rounded-2xl"><table class="w-full planilla text-[11px]"><thead class="bg-orange-50"><tr><th class="text-left">Docente</th><th class="text-left">Año</th><th class="text-left">Asignatura</th><th>Estado</th><th>Ver</th><th>Subir</th></tr></thead><tbody>
+      ${c.docentes.map((d, di) => d.unidades.map((u, ui) => `<tr><td style="text-align:left" class="font-semibold">${esc(d.nombre)}</td><td style="text-align:left">${esc(u.grado)}</td><td style="text-align:left">${esc(u.asignatura)}</td><td>${ESTPL[u.estado]}</td>
+        <td>${u.idPla ? `<button class="btn btn-sec py-0.5" onclick="verPlan('${esc(u.idPla)}')">👁 Ver</button>` : ''}</td>
+        <td>${c.abierto && !u.aprobada ? `<input type="file" id="pf-f-${ci}-${di}-${ui}" accept=".pdf,.docx,.xlsx" class="text-[10px] max-w-[160px]"><button onclick="subirPlanif(${ci},${di},${ui})" class="btn btn-warn py-0.5 mt-1">📤 ${u.idPla ? 'Subir otro' : 'Subir'}</button>` : `<span class="text-slate-400">${u.aprobada ? 'Aprobada' : '—'}</span>`}</td></tr>`).join('')).join('') || '<tr><td colspan="6" class="text-slate-400">Ningún docente coincide con su área / subnivel.</td></tr>'}</tbody></table></div></div>`).join('')
       : '<div class="card text-xs text-slate-500">No tiene coordinaciones asignadas.</div>';
   });
 }
-async function subirPlanif(ci, di) {
-  const c = S.misCoord[ci], d = c.docentes[di], f = $('pf-f-' + ci + '-' + di).files[0];
+async function subirPlanif(ci, di, ui) {
+  const c = S.pfv[ci], d = c.docentes[di], u = d.unidades[ui], f = $(`pf-f-${ci}-${di}-${ui}`).files[0];
   if (!f) return toast('Seleccione el archivo.', 'err');
   if (f.size > 10 * 1024 * 1024) return toast('El archivo supera 10 MB.', 'err');
   const datos = await new Promise((ok, err) => { const rd = new FileReader(); rd.onload = () => ok(String(rd.result).split(',')[1]); rd.onerror = err; rd.readAsDataURL(f); });
-  await run(async () => { const r = await apiT('apiSubirPlanificacion', c.id, d.id, { nombre: f.name, mime: f.type, datos }); toast(r.mensaje, 'ok'); cargarPlanif(); });
+  await run(async () => { const r = await apiT('apiSubirPlanificacion', c.id, d.id, { nombre: f.name, mime: f.type, datos, grado: u.grado, asignatura: u.asignatura, trimestre: c.trimestre }); toast(r.mensaje, 'ok'); cargarPlanif(); });
+}
+async function cargarMisPlan() {
+  await run(async () => {
+    const l = await apiT('apiMisPlanificaciones');
+    $('mp-area').innerHTML = l.length ? `<table class="w-full planilla text-[11px]"><thead class="bg-sky-50"><tr><th>Trimestre</th><th class="text-left">Año</th><th class="text-left">Asignatura</th><th>Estado</th><th>Ver</th></tr></thead><tbody>${l.map(u => `<tr><td>${u.trimestre}°</td><td style="text-align:left">${esc(u.grado)}</td><td style="text-align:left">${esc(u.asignatura)}</td><td>${ESTPL[u.estado]}${u.aprobadoPor ? ' <small>(' + esc(u.aprobadoPor) + ')</small>' : ''}</td><td>${u.idPla ? `<button class="btn btn-sec py-0.5" onclick="verPlan('${esc(u.idPla)}')">👁 Ver</button>` : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="text-slate-400 text-xs">Aún no tiene planificaciones asignadas.</p>';
+  });
+}
+async function cargarPlazos() {
+  const r = await apiT('apiPlazosPlan'); S.plz = r.plazos; $('pz-card').classList.toggle('hidden', !r.puedeEditar);
+  $('pz-lista').innerHTML = r.plazos.map(p => `<button class="px-2 py-0.5 rounded-full border mr-1 mb-1 ${p.estado === 'ABIERTO' ? 'bg-emerald-100' : 'bg-slate-100'}" onclick="editarPlazo('${esc(p.id)}')">${p.trimestre}° · ${esc(p.jornada)} · ${esc(p.inicio || '—')} a ${esc(p.limite)} · ${p.estado === 'ABIERTO' ? 'Abierto' : 'Cerrado'}</button>`).join('') || '<span class="text-slate-400">Sin plazos definidos: los coordinadores no pueden subir planificaciones.</span>';
+}
+function editarPlazo(id) { const p = (S.plz || []).find(x => x.id === id); if (!p) return; $('pz-t').value = p.trimestre; $('pz-j').value = p.jornada; $('pz-i').value = p.inicio; $('pz-l').value = p.limite; $('pz-e').value = p.estado; }
+async function guardarPlazo() { await run(async () => { const r = await apiT('apiGuardarPlazoPlan', { trimestre: $('pz-t').value, jornada: $('pz-j').value, inicio: $('pz-i').value, limite: $('pz-l').value, estado: $('pz-e').value }); toast(r.mensaje, 'ok'); cargarPlazos(); }); }
+async function cargarRevision() {
+  await run(async () => {
+    const r = S.rev = await apiT('apiRevisionPlanif', $('pd-jor') ? $('pd-jor').value : '', $('rv-t').value);
+    $('rv-area').innerHTML = r.coordinaciones.map((c, ci) => `<div class="border rounded-2xl p-2 mb-2"><div class="font-black">${esc(c.coordinador)} · ${esc(c.texto)} · ${c.abierto ? 'plazo abierto hasta ' + esc(c.limite) : 'plazo cerrado'}</div>
+      <table class="w-full planilla text-[11px] mt-1"><thead class="bg-slate-50"><tr><th class="text-left">Docente</th><th class="text-left">Año</th><th class="text-left">Asignatura</th><th>Estado</th><th>Ver</th><th>Aprobada</th></tr></thead><tbody>
+      ${c.docentes.map((d, di) => d.unidades.map((u, ui) => `<tr><td style="text-align:left">${esc(d.nombre)}</td><td style="text-align:left">${esc(u.grado)}</td><td style="text-align:left">${esc(u.asignatura)}</td><td>${ESTPL[u.estado]}</td>
+        <td>${u.idPla ? `<button class="btn btn-sec py-0.5" onclick="verPlan('${esc(u.idPla)}')">👁 Ver</button>` : ''}</td><td>${u.idPla ? `<input type="checkbox" ${u.aprobada ? 'checked' : ''} onchange="aprobarPlan(${ci},${di},${ui},this.checked)">` : ''}</td></tr>`).join('')).join('') || '<tr><td colspan="6" class="text-slate-400">Sin docentes.</td></tr>'}</tbody></table></div>`).join('') || '<p class="text-slate-400">Sin coordinaciones.</p>';
+  });
+}
+async function aprobarPlan(ci, di, ui, v) {
+  const c = S.rev.coordinaciones[ci], d = c.docentes[di], u = d.unidades[ui];
+  await run(async () => { const r = await apiT('apiAprobarPlanificacion', d.id, u.grado, u.asignatura, c.trimestre, v); toast(r.mensaje, 'ok'); cargarRevision(); });
 }
 
 // ---- Cronograma escolar (vinculado) ----
@@ -2419,7 +2503,6 @@ async function cargarCrono(forzar) {
     if (!S.crFecha) S.crFecha = ymdC(new Date());
     const areas = [...new Set(r.actividades.concat(r.semanal).map(a => a.area).filter(Boolean))].sort();
     $('cr-area').innerHTML = '<option value="">Todas las áreas</option>' + areas.map(a => `<option>${esc(a)}</option>`).join('');
-    $('cr-ley').innerHTML = r.tipos.map(t => `<span class="px-2 py-0.5 rounded-full font-bold" style="background:${esc(t.color)}33;border:1px solid ${esc(t.color)}">${esc(t.nombre)}${t.sinClases ? ' · sin clases' : ''}</span>`).join('');
     $('cr-b-mail').classList.toggle('hidden', !r.puedeCorreo);
     $('cr-info').textContent = 'Se toma del sistema del cronograma (solo lectura) · leído: ' + r.leido;
     crPintar();
