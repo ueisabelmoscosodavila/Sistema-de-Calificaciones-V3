@@ -1308,7 +1308,7 @@ api('apiInfoPublica').then(i => {
   revisarVersion(i.version);
 }).catch(() => {});
 // ---- v4.20: la página se actualiza sola cuando hay una versión nueva del sistema ----
-const VERSION_CLIENTE = '4.26.4';
+const VERSION_CLIENTE = '4.29.0';
 function revisarVersion(v) {
   if (!v || v === VERSION_CLIENTE || EN_APPS_SCRIPT) return;
   if (S.sucio) return; // nunca se recarga con notas sin guardar
@@ -2451,8 +2451,8 @@ async function cargarPlanif() {
     const l = S.misCoord = await apiT('apiMisCoordinaciones'), vs = S.pfv = await Promise.all(l.map(c => apiT('apiPlanifCoord', c.id, sel.value)));
     $('pf-area').innerHTML = vs.length ? vs.map((c, ci) => `<div class="card space-y-2"><div class="font-black text-xs">📂 ${esc(c.texto)} · ${c.trimestre}° trimestre · <span class="${c.abierto ? 'text-emerald-700' : 'text-red-700'}">${c.abierto ? 'plazo abierto hasta ' + esc(c.limite) : 'plazo cerrado: no se puede subir'}</span></div>
       <div class="overflow-x-auto border rounded-2xl"><table class="w-full planilla text-[11px]"><thead class="bg-orange-50"><tr><th class="text-left">Docente</th><th class="text-left">Año</th><th class="text-left">Asignatura</th><th>Estado</th><th>Ver</th><th>Subir</th></tr></thead><tbody>
-      ${c.docentes.map((d, di) => d.unidades.map((u, ui) => `<tr><td style="text-align:left" class="font-semibold">${esc(d.nombre)}</td><td style="text-align:left">${esc(u.grado)}</td><td style="text-align:left">${esc(u.asignatura)}</td><td>${ESTPL[u.estado]}</td>
-        <td>${u.idPla ? `<button class="btn btn-sec py-0.5" onclick="verPlan('${esc(u.idPla)}')">👁 Ver</button>` : ''}</td>
+      ${c.docentes.map((d, di) => d.unidades.map((u, ui) => `<tr><td style="text-align:left" class="font-semibold">${esc(d.nombre)}</td><td style="text-align:left">${esc(u.grado)}</td><td style="text-align:left">${esc(u.asignatura)}</td><td>${ESTPL[u.estado]}${u.elim ? '<br><small class="text-red-700">🗑 eliminación autorizada</small>' : ''}</td>
+        <td>${u.idPla ? `<button class="btn btn-sec py-0.5" onclick="verPlan('${esc(u.idPla)}')">👁 Ver</button>` : ''}${u.elim ? `<br><button class="btn bg-red-50 text-red-700 border border-red-200 py-0.5 mt-1" onclick="eliminarPlanif(${ci},${di},${ui})">🗑 Eliminar</button>` : ''}</td>
         <td>${c.abierto && !u.aprobada ? `<input type="file" id="pf-f-${ci}-${di}-${ui}" accept=".pdf,.docx,.xlsx" class="text-[10px] max-w-[160px]"><button onclick="subirPlanif(${ci},${di},${ui})" class="btn btn-warn py-0.5 mt-1">📤 ${u.idPla ? 'Subir otro' : 'Subir'}</button>` : `<span class="text-slate-400">${u.aprobada ? 'Aprobada' : '—'}</span>`}</td></tr>`).join('')).join('') || '<tr><td colspan="6" class="text-slate-400">Ningún docente coincide con su área / subnivel.</td></tr>'}</tbody></table></div></div>`).join('')
       : '<div class="card text-xs text-slate-500">No tiene coordinaciones asignadas.</div>';
   });
@@ -2463,6 +2463,16 @@ async function subirPlanif(ci, di, ui) {
   if (f.size > 10 * 1024 * 1024) return toast('El archivo supera 10 MB.', 'err');
   const datos = await new Promise((ok, err) => { const rd = new FileReader(); rd.onload = () => ok(String(rd.result).split(',')[1]); rd.onerror = err; rd.readAsDataURL(f); });
   await run(async () => { const r = await apiT('apiSubirPlanificacion', c.id, d.id, { nombre: f.name, mime: f.type, datos, grado: u.grado, asignatura: u.asignatura, trimestre: c.trimestre }); toast(r.mensaje, 'ok'); cargarPlanif(); });
+}
+async function eliminarPlanif(ci, di, ui) {
+  const c = S.pfv[ci], d = c.docentes[di], u = d.unidades[ui];
+  if (!confirm('¿Eliminar el archivo de ' + d.nombre + ' (' + u.asignatura + ', ' + u.grado + ')? Esta acción no se puede deshacer desde el sistema.')) return;
+  await run(async () => { const r = await apiT('apiEliminarPlanificacion', c.id, d.id, u.grado, u.asignatura, c.trimestre); toast(r.mensaje, 'ok'); cargarPlanif(); });
+}
+async function autorizarElim(ci, di, ui, v) {
+  const c = S.rev.coordinaciones[ci], d = c.docentes[di], u = d.unidades[ui];
+  if (v && !confirm('¿Autorizar a Coordinación para eliminar este archivo? Se retirará la aprobación.')) return;
+  await run(async () => { const r = await apiT('apiAutorizarEliminacion', d.id, u.grado, u.asignatura, c.trimestre, v); toast(r.mensaje, 'ok'); cargarRevision(); });
 }
 async function cargarMisPlan() {
   await run(async () => {
@@ -2480,9 +2490,9 @@ async function cargarRevision() {
   await run(async () => {
     const r = S.rev = await apiT('apiRevisionPlanif', $('pd-jor') ? $('pd-jor').value : '', $('rv-t').value);
     $('rv-area').innerHTML = r.coordinaciones.map((c, ci) => `<div class="border rounded-2xl p-2 mb-2"><div class="font-black">${esc(c.coordinador)} · ${esc(c.texto)} · ${c.abierto ? 'plazo abierto hasta ' + esc(c.limite) : 'plazo cerrado'}</div>
-      <table class="w-full planilla text-[11px] mt-1"><thead class="bg-slate-50"><tr><th class="text-left">Docente</th><th class="text-left">Año</th><th class="text-left">Asignatura</th><th>Estado</th><th>Ver</th><th>Aprobada</th></tr></thead><tbody>
-      ${c.docentes.map((d, di) => d.unidades.map((u, ui) => `<tr><td style="text-align:left">${esc(d.nombre)}</td><td style="text-align:left">${esc(u.grado)}</td><td style="text-align:left">${esc(u.asignatura)}</td><td>${ESTPL[u.estado]}</td>
-        <td>${u.idPla ? `<button class="btn btn-sec py-0.5" onclick="verPlan('${esc(u.idPla)}')">👁 Ver</button>` : ''}</td><td>${u.idPla ? `<input type="checkbox" ${u.aprobada ? 'checked' : ''} onchange="aprobarPlan(${ci},${di},${ui},this.checked)">` : ''}</td></tr>`).join('')).join('') || '<tr><td colspan="6" class="text-slate-400">Sin docentes.</td></tr>'}</tbody></table></div>`).join('') || '<p class="text-slate-400">Sin coordinaciones.</p>';
+      <table class="w-full planilla text-[11px] mt-1"><thead class="bg-slate-50"><tr><th class="text-left">Docente</th><th class="text-left">Año</th><th class="text-left">Asignatura</th><th>Estado</th><th>Ver</th><th>Aprobada</th><th>Eliminar</th></tr></thead><tbody>
+      ${c.docentes.map((d, di) => d.unidades.map((u, ui) => `<tr><td style="text-align:left">${esc(d.nombre)}</td><td style="text-align:left">${esc(u.grado)}</td><td style="text-align:left">${esc(u.asignatura)}</td><td>${ESTPL[u.estado]}${u.elim ? '<br><small class="text-red-700">🗑 autorizada</small>' : ''}</td>
+        <td>${u.idPla ? `<button class="btn btn-sec py-0.5" onclick="verPlan('${esc(u.idPla)}')">👁 Ver</button>` : ''}</td><td>${u.idPla ? `<input type="checkbox" ${u.aprobada ? 'checked' : ''} onchange="aprobarPlan(${ci},${di},${ui},this.checked)">` : ''}</td><td>${u.idPla ? (u.elim ? `<button class="btn btn-sec py-0.5" onclick="autorizarElim(${ci},${di},${ui},false)">↩ Quitar</button>` : `<button class="btn bg-red-50 text-red-700 border border-red-200 py-0.5" onclick="autorizarElim(${ci},${di},${ui},true)">🗑 Autorizar</button>`) : ''}</td></tr>`).join('')).join('') || '<tr><td colspan="7" class="text-slate-400">Sin docentes.</td></tr>'}</tbody></table></div>`).join('') || '<p class="text-slate-400">Sin coordinaciones.</p>';
   });
 }
 async function aprobarPlan(ci, di, ui, v) {
