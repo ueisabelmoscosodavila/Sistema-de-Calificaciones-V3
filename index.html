@@ -525,8 +525,11 @@
         <h3 class="font-black text-sm">📤 Planificaciones y coordinadores de área / subnivel</h3>
         <div id="co-form" class="hidden grid grid-cols-2 sm:grid-cols-6 gap-2 items-end bg-orange-50 border border-orange-200 rounded-2xl p-3 text-xs">
           <div class="col-span-2"><label class="lbl">Docente coordinador/a</label><select id="co-doc" class="inp"></select></div>
-          <div><label class="lbl">Área</label><select id="co-are" class="inp"></select></div>
-          <div><label class="lbl">Subniveles (uno o más)</label><select id="co-sub" class="inp" multiple size="4"></select></div>
+          <div><label class="lbl">Tipo de coordinación</label><select id="co-tipo" class="inp" onchange="coTipo()"><option value="AREA">Por área</option><option value="SUBNIVEL">Por subnivel</option></select></div>
+          <div id="co-g-are"><label class="lbl">Área</label><select id="co-are" class="inp"></select></div>
+          <div id="co-g-ainc" class="hidden"><label class="lbl">Áreas que incluye (vacío = todas las de aula)</label><select id="co-ainc" class="inp" multiple size="4"></select></div>
+          <div><label class="lbl">Subniveles (uno o más)</label><select id="co-sub" class="inp" multiple size="4" onchange="coGrados()"></select></div>
+          <div><label class="lbl">Años (opcional, uno o más)</label><select id="co-gra" class="inp" multiple size="4"></select></div>
           <div class="col-span-2"><label class="lbl">Docentes adicionales (opcional, uno o más)</label><select id="co-ext" class="inp" multiple size="4"></select></div>
           <div><label class="lbl">Jornada</label><select id="co-jor" class="inp"><option>Ambas</option><option>Matutina</option><option>Vespertina</option></select></div>
           <div><label class="lbl">Fecha límite</label><input id="co-lim" type="date" class="inp"></div>
@@ -664,7 +667,8 @@
           <div class="flex gap-2"><select id="rc-usr" class="inp"></select><button onclick="resetUsuario()" class="btn btn-warn">🔑 Nueva contraseña</button></div></div>
         <div class="card space-y-2"><h3 class="font-black text-sm">🕵️ Cargos de Inspección</h3>
           <p class="text-[11px] text-slate-500">Nombre del cargo, jornada (Ambas = las dos) y estado. Desactivar no borra lo que el cargo registró.</p>
-          <div id="ci-area" class="text-xs"></div></div>
+          <div class="flex flex-wrap gap-2 mb-2 text-xs"><span class="text-slate-500">Cargos adicionales de subinspección (solo si hacen falta):</span><button onclick="crearCargoInsp('SUBINSPECTOR_MATUTINA')" class="btn btn-sec py-0.5">➕ Subinspección matutina</button><button onclick="crearCargoInsp('SUBINSPECTOR_VESPERTINA')" class="btn btn-sec py-0.5">➕ Subinspección vespertina</button></div>
+<div id="ci-area" class="text-xs"></div></div>
       </div>
       <div class="card space-y-2">
         <div class="flex flex-wrap justify-between items-center gap-2"><div><h3 class="font-black text-sm">🛡️ Permisos por rol</h3>
@@ -1191,7 +1195,7 @@ function nivelG(g) { const x = S.cat.grados.find(y => y.g === g); return x ? x.n
 function ordenG(g) { const x = S.cat.grados.find(y => y.g === g); return x ? x.o : 99; }
 function tipoEsc(g) { return ordenG(g) <= 4 ? 'ELEMENTAL' : 'CUANTITATIVA'; }
 function esRectora() { return S.ses && S.ses.rol === 'RECTORA'; }
-function esInspeccion() { return S.ses && ['INSPECTOR_GENERAL', 'SUBINSPECTOR_MATUTINA', 'SUBINSPECTOR_VESPERTINA'].indexOf(S.ses.rol) >= 0; }
+function esInspeccion() { return S.ses && ['INSPECTOR_GENERAL', 'SUBINSPECCION', 'SUBINSPECTOR_MATUTINA', 'SUBINSPECTOR_VESPERTINA'].indexOf(S.ses.rol) >= 0; }
 function jornadasDir(conAmbas) {
   if (S.cat.jornadaFija) return [S.cat.jornadaFija];
   return conAmbas ? [{ v: 'Ambas', t: 'Todas las jornadas' }, 'Matutina', 'Vespertina'] : ['Matutina', 'Vespertina'];
@@ -1308,7 +1312,7 @@ api('apiInfoPublica').then(i => {
   revisarVersion(i.version);
 }).catch(() => {});
 // ---- v4.20: la página se actualiza sola cuando hay una versión nueva del sistema ----
-const VERSION_CLIENTE = '4.29.0';
+const VERSION_CLIENTE = '4.30.0';
 function revisarVersion(v) {
   if (!v || v === VERSION_CLIENTE || EN_APPS_SCRIPT) return;
   if (S.sucio) return; // nunca se recarga con notas sin guardar
@@ -2399,12 +2403,14 @@ async function cargarCoord() {
   try {
     const r = S.coord = await apiT('apiCoordinadores', $('pd-jor') ? $('pd-jor').value : '');
     cargarPlazos().catch(() => {});
+    { const pa = (S.cat.periodos || []).find(p => p.tipo === 'TRIMESTRE' && p.estado === 'ABIERTO'), rt = $('rv-t'); if (!rt.dataset.ok) { rt.value = pa ? pa.trimestre : 1; rt.dataset.ok = 1; } cargarRevision(); } // v4.30: la revisión se carga sola
     $('co-form').classList.toggle('hidden', !r.puedeEditar || (S.cat.bloqueos || []).includes('COORDINADORES'));
     if (r.puedeEditar) {
       $('co-doc').innerHTML = opts(r.docentes.map(d => d.id), '', '—'); [...$('co-doc').options].forEach(o => { const d = r.docentes.find(x => x.id === o.value); if (d) o.textContent = d.nombre; });
-      $('co-are').innerHTML = '<option value="">(cualquiera)</option>' + r.areas.map(a => `<option>${esc(a)}</option>`).join('');
+      $('co-are').innerHTML = '<option value="">— Seleccione —</option>' + r.areas.map(a => `<option>${esc(a)}</option>`).join('');
       $('co-sub').innerHTML = r.subniveles.map(a => `<option>${esc(a)}</option>`).join('');
       $('co-ext').innerHTML = r.docentes.map(d => `<option value="${esc(d.id)}">${esc(d.nombre)}</option>`).join('');
+      $('co-ainc').innerHTML = (r.areasAula || []).map(a => `<option>${esc(a)}</option>`).join(''); coTipo(); coGrados();
     }
     $('co-area').innerHTML = r.coordinaciones.length ? r.coordinaciones.map(c => `<div class="border rounded-2xl p-2 mb-2">
       <div class="flex flex-wrap justify-between gap-2"><div><b>${esc(c.coordinador)}</b> · ${esc(c.texto)}${c.fechaLimite ? ' · fecha límite ' + esc(c.fechaLimite) : ''} · <span class="font-black ${c.entregados === c.docentes.length ? 'text-emerald-700' : 'text-amber-700'}">${c.entregados}/${c.docentes.length} entregadas</span></div>
@@ -2415,8 +2421,13 @@ async function cargarCoord() {
       : '<p class="text-slate-400">Aún no hay coordinadores asignados.</p>';
   } catch (e) { $('co-area').textContent = e.message; }
 }
+function coTipo() { const a = $('co-tipo').value === 'AREA'; $('co-g-are').classList.toggle('hidden', !a); $('co-g-ainc').classList.toggle('hidden', a); }
+function coGrados() {
+  const subs = [...$('co-sub').selectedOptions].map(o => o.value), sel = new Set([...$('co-gra').selectedOptions].map(o => o.value));
+  $('co-gra').innerHTML = ((S.coord && S.coord.grados) || []).filter(g => !subs.length || subs.includes(g.n)).map(g => `<option value="${esc(g.g)}" ${sel.has(g.g) ? 'selected' : ''}>${esc(g.g)}</option>`).join('');
+}
 async function guardarCoord() {
-  const x = { idDocente: $('co-doc').value, area: $('co-are').value, subnivel: [...$('co-sub').selectedOptions].map(o => o.value), docentesExtra: [...$('co-ext').selectedOptions].map(o => o.value), jornada: $('co-jor').value, carpeta: $('co-car').value, fechaLimite: $('co-lim').value };
+  const x = { idDocente: $('co-doc').value, tipo: $('co-tipo').value, grados: [...$('co-gra').selectedOptions].map(o => o.value), areasInc: [...$('co-ainc').selectedOptions].map(o => o.value), area: $('co-are').value, subnivel: [...$('co-sub').selectedOptions].map(o => o.value), docentesExtra: [...$('co-ext').selectedOptions].map(o => o.value), jornada: $('co-jor').value, carpeta: $('co-car').value, fechaLimite: $('co-lim').value };
   await run(async () => { const r = await apiT('apiGuardarCoordinador', x); toast(r.mensaje, 'ok'); cargarCoord(); });
 }
 async function quitarCoord(id) { if (!confirm('¿Quitar esta coordinación? Los archivos subidos se conservan.')) return; await run(async () => { const r = await apiT('apiQuitarCoordinador', id); toast(r.mensaje, 'ok'); cargarCoord(); }); }
@@ -2488,13 +2499,22 @@ function editarPlazo(id) { const p = (S.plz || []).find(x => x.id === id); if (!
 async function guardarPlazo() { await run(async () => { const r = await apiT('apiGuardarPlazoPlan', { trimestre: $('pz-t').value, jornada: $('pz-j').value, inicio: $('pz-i').value, limite: $('pz-l').value, estado: $('pz-e').value }); toast(r.mensaje, 'ok'); cargarPlazos(); }); }
 async function cargarRevision() {
   await run(async () => {
-    const r = S.rev = await apiT('apiRevisionPlanif', $('pd-jor') ? $('pd-jor').value : '', $('rv-t').value);
+    const r = S.rev = await apiT('apiRevisionPlanif', $('pd-jor') ? $('pd-jor').value : '', $('rv-t').value), esR = !!r.esRectora;
     $('rv-area').innerHTML = r.coordinaciones.map((c, ci) => `<div class="border rounded-2xl p-2 mb-2"><div class="font-black">${esc(c.coordinador)} · ${esc(c.texto)} · ${c.abierto ? 'plazo abierto hasta ' + esc(c.limite) : 'plazo cerrado'}</div>
-      <table class="w-full planilla text-[11px] mt-1"><thead class="bg-slate-50"><tr><th class="text-left">Docente</th><th class="text-left">Año</th><th class="text-left">Asignatura</th><th>Estado</th><th>Ver</th><th>Aprobada</th><th>Eliminar</th></tr></thead><tbody>
-      ${c.docentes.map((d, di) => d.unidades.map((u, ui) => `<tr><td style="text-align:left">${esc(d.nombre)}</td><td style="text-align:left">${esc(u.grado)}</td><td style="text-align:left">${esc(u.asignatura)}</td><td>${ESTPL[u.estado]}${u.elim ? '<br><small class="text-red-700">🗑 autorizada</small>' : ''}</td>
-        <td>${u.idPla ? `<button class="btn btn-sec py-0.5" onclick="verPlan('${esc(u.idPla)}')">👁 Ver</button>` : ''}</td><td>${u.idPla ? `<input type="checkbox" ${u.aprobada ? 'checked' : ''} onchange="aprobarPlan(${ci},${di},${ui},this.checked)">` : ''}</td><td>${u.idPla ? (u.elim ? `<button class="btn btn-sec py-0.5" onclick="autorizarElim(${ci},${di},${ui},false)">↩ Quitar</button>` : `<button class="btn bg-red-50 text-red-700 border border-red-200 py-0.5" onclick="autorizarElim(${ci},${di},${ui},true)">🗑 Autorizar</button>`) : ''}</td></tr>`).join('')).join('') || '<tr><td colspan="7" class="text-slate-400">Sin docentes.</td></tr>'}</tbody></table></div>`).join('') || '<p class="text-slate-400">Sin coordinaciones.</p>';
+      <table class="w-full planilla text-[11px] mt-1"><thead class="bg-slate-50"><tr><th class="text-left">Docente</th><th class="text-left">Año</th><th class="text-left">Asignatura</th><th>Estado</th><th>Ver</th><th>Aprobada</th>${esR ? '<th>Eliminar</th>' : ''}</tr></thead><tbody>
+      ${c.docentes.map((d, di) => d.unidades.map((u, ui) => `<tr><td style="text-align:left">${esc(d.nombre)}</td><td style="text-align:left">${esc(u.grado)}</td><td style="text-align:left">${esc(u.asignatura)}</td><td>${ESTPL[u.estado]}${u.elim ? '<br><small class="text-red-700">🗑 habilitada a Coordinación</small>' : ''}</td>
+        <td>${u.idPla ? `<button class="btn btn-sec py-0.5" onclick="verPlan('${esc(u.idPla)}')">👁 Ver</button>` : ''}</td><td>${u.idPla ? `<input type="checkbox" ${u.aprobada ? 'checked' : ''} onchange="aprobarPlan(${ci},${di},${ui},this.checked)">` : ''}</td>
+        ${esR ? `<td>${u.idPla ? `<button class="btn bg-red-50 text-red-700 border border-red-200 py-0.5" onclick="eliminarDirecto('${esc(u.idPla)}')">🗑 Eliminar</button><br>` + (u.elim ? `<button class="btn btn-sec py-0.5 mt-1" onclick="autorizarElim(${ci},${di},${ui},false)">↩ Quitar habilitación</button>` : `<button class="btn btn-sec py-0.5 mt-1" onclick="autorizarElim(${ci},${di},${ui},true)">🔓 Habilitar a Coordinación</button>`) : ''}</td>` : ''}</tr>`).join('')).join('') || `<tr><td colspan="${esR ? 7 : 6}" class="text-slate-400">Sin docentes.</td></tr>`}</tbody></table></div>`).join('') || '<p class="text-slate-400">Sin coordinaciones.</p>';
+    if (r.anteriores.length) $('rv-area').innerHTML += `<div class="border rounded-2xl p-2 mb-2"><div class="font-black">📁 Planificaciones anteriores (subidas sin trimestre, año ni asignatura)</div>
+      <table class="w-full planilla text-[11px] mt-1"><thead class="bg-slate-50"><tr><th class="text-left">Docente</th><th class="text-left">Archivo</th><th>Fecha</th><th>Subió</th><th>Ver</th>${esR ? '<th>Eliminar</th>' : ''}</tr></thead><tbody>
+      ${r.anteriores.map(a => `<tr><td style="text-align:left">${esc(a.docente)}</td><td style="text-align:left">${esc(a.archivo)}</td><td>${esc(a.fecha)}</td><td>${esc(a.coordinador)}</td><td><button class="btn btn-sec py-0.5" onclick="verPlan('${esc(a.id)}')">👁 Ver</button></td>${esR ? `<td><button class="btn bg-red-50 text-red-700 border border-red-200 py-0.5" onclick="eliminarDirecto('${esc(a.id)}')">🗑 Eliminar</button></td>` : ''}</tr>`).join('')}</tbody></table></div>`;
   });
 }
+async function eliminarDirecto(id) {
+  if (!confirm('¿Eliminar este archivo? Irá a la papelera de Drive.')) return;
+  await run(async () => { const r = await apiT('apiEliminarPlanifDirecto', id); toast(r.mensaje, 'ok'); cargarRevision(); });
+}
+async function crearCargoInsp(rol) { await run(async () => { const r = await apiT('apiCrearCargoInspeccion', rol); toast(r.mensaje, 'ok'); mostrarCred(r.credenciales); cargarAdminExtras(); }); }
 async function aprobarPlan(ci, di, ui, v) {
   const c = S.rev.coordinaciones[ci], d = c.docentes[di], u = d.unidades[ui];
   await run(async () => { const r = await apiT('apiAprobarPlanificacion', d.id, u.grado, u.asignatura, c.trimestre, v); toast(r.mensaje, 'ok'); cargarRevision(); });
