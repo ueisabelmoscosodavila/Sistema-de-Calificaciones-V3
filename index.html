@@ -303,7 +303,7 @@
         <div class="flex flex-wrap justify-between items-center gap-2">
           <div><h3 class="font-black text-sm">📅 Cronograma escolar</h3><p class="text-[11px] text-slate-500" id="cr-info">Se toma del sistema del cronograma (solo lectura).</p></div>
           <div class="flex flex-wrap gap-1 items-center">
-            <button onclick="crVista('mes')" id="cr-b-mes" class="btn btn-sec py-1">Mes</button><button onclick="crVista('tri')" id="cr-b-tri" class="btn btn-sec py-1">Trimestre</button><button onclick="crVista('sem')" id="cr-b-sem" class="btn btn-sec py-1">Semana</button>
+            <button onclick="crVista('anu')" id="cr-b-anu" class="btn btn-sec py-1">Año lectivo</button><button onclick="crVista('mes')" id="cr-b-mes" class="btn btn-sec py-1">Mes</button><button onclick="crVista('tri')" id="cr-b-tri" class="btn btn-sec py-1">Trimestre</button><button onclick="crVista('sem')" id="cr-b-sem" class="btn btn-sec py-1">Semana</button><button onclick="crVista('dia')" id="cr-b-dia" class="btn btn-sec py-1">Día</button>
             <button onclick="crMover(-1)" class="btn btn-sec py-1">◀</button><button onclick="crHoy()" class="btn btn-sec py-1">Hoy</button><button onclick="crMover(1)" class="btn btn-sec py-1">▶</button>
             <select id="cr-area" class="inp w-auto py-1" onchange="crPintar()"><option value="">Todas las áreas</option></select>
             <select id="cr-per" class="inp w-auto py-1 hidden" onchange="crPintar()"></select>
@@ -312,6 +312,7 @@
             <button onclick="cargarCrono(true)" class="btn btn-sec py-1" title="Volver a leer">🔄</button>
           </div>
         </div>
+        <div id="cr-vistas" class="hidden bg-slate-50 border rounded-xl p-2 text-[11px] space-y-1"></div>
         <div id="cr-tit" class="font-black text-sm text-center"></div>
         <div id="cr-area-v"></div>
       </div>
@@ -1312,7 +1313,7 @@ api('apiInfoPublica').then(i => {
   revisarVersion(i.version);
 }).catch(() => {});
 // ---- v4.20: la página se actualiza sola cuando hay una versión nueva del sistema ----
-const VERSION_CLIENTE = '4.30.0';
+const VERSION_CLIENTE = '4.32.0';
 function revisarVersion(v) {
   if (!v || v === VERSION_CLIENTE || EN_APPS_SCRIPT) return;
   if (S.sucio) return; // nunca se recarga con notas sin guardar
@@ -2534,15 +2535,20 @@ async function cargarCrono(forzar) {
     const areas = [...new Set(r.actividades.concat(r.semanal).map(a => a.area).filter(Boolean))].sort();
     $('cr-area').innerHTML = '<option value="">Todas las áreas</option>' + areas.map(a => `<option>${esc(a)}</option>`).join('');
     $('cr-b-mail').classList.toggle('hidden', !r.puedeCorreo);
+    crAplicarVistas(r);
     $('cr-info').textContent = 'Se toma del sistema del cronograma (solo lectura) · leído: ' + r.leido;
     crPintar();
   });
 }
 function crVista(v) { S.crVista = v; crPintar(); }
+function crAnios() { const m = {}; ((S.crono || {}).periodos || []).forEach(p => { const k = p.anio || 'x', z = m[k] = m[k] || { inicio: p.inicio, fin: p.fin }; if (p.inicio < z.inicio) z.inicio = p.inicio; if (p.fin > z.fin) z.fin = p.fin; }); return Object.values(m).sort((a, b) => a.inicio.localeCompare(b.inicio)); }
+const crSem = () => S.crVista === 'sem' || S.crVista === 'dia';
 function crHoy() { S.crFecha = ymdC(new Date()); crPintar(); }
 function crMover(n) {
   const d = parseC(S.crFecha);
   if (S.crVista === 'mes') d.setMonth(d.getMonth() + n, 1);
+  else if (S.crVista === 'anu') { const a = crAnios(), i = a.findIndex(z => z.inicio <= S.crFecha && S.crFecha <= z.fin), q = a[Math.min(a.length - 1, Math.max(0, (i < 0 ? a.length - 1 : i) + n))]; if (q) { S.crFecha = q.inicio; return crPintar(); } d.setFullYear(d.getFullYear() + n); }
+  else if (S.crVista === 'dia') d.setDate(d.getDate() + n);
   else if (S.crVista === 'sem') d.setDate(d.getDate() + 7 * n);
   else { const ps = crPeriodos(), i = ps.findIndex(p => p.id === $('cr-per').value); const q = ps[Math.min(ps.length - 1, Math.max(0, i + n))]; if (q) { $('cr-per').value = q.id; S.crFecha = q.inicio; return crPintar(); } }
   S.crFecha = ymdC(d); crPintar();
@@ -2555,6 +2561,16 @@ function crActs(desde, hasta, conSemanal) {
   const r = S.crono, a = $('cr-area').value;
   return r.actividades.concat(conSemanal ? r.semanal : []).filter(x => x.fin >= desde && x.inicio <= hasta && (!a || x.area === a)).sort((x, y) => x.inicio.localeCompare(y.inicio));
 }
+const notasDia = y => ((S.crono.notas || []).filter(n => n.fecha === y).map(n => `<div class="mb-1 rounded-lg p-1.5 text-[10px] bg-amber-50 border border-amber-200">📝 ${esc(n.nota)}</div>`).join(''));
+const CR_V = { ANUAL: ['anu', 'Año lectivo'], MENSUAL: ['mes', 'Mes'], TRIMESTRAL: ['tri', 'Trimestre'], SEMANAL: ['sem', 'Semana'], DIA: ['dia', 'Día'] };
+function crAplicarVistas(r) {
+  const ok = S.crOk = r.vistas.map(v => CR_V[v][0]);
+  if (!ok.includes(S.crVista)) S.crVista = ok.includes('mes') ? 'mes' : ok[0];
+  const p = $('cr-vistas'), adm = r.puedeVistas === 'ADMIN'; p.classList.toggle('hidden', !r.puedeVistas);
+  const fila = (q, t, sel) => `<div class="flex flex-wrap gap-3 items-center"><b>${t}</b>` + Object.keys(CR_V).map(v => `<label><input type="checkbox" class="cr-vchk-${q}" value="${v}" ${sel.includes(v) ? 'checked' : ''}> ${CR_V[v][1]}</label>`).join('') + `<button onclick="crGuardarVistas('${q}')" class="btn btn-ok py-0.5">💾 Guardar</button></div>`;
+  if (r.puedeVistas) p.innerHTML = (adm ? fila('PERSONAL', 'Rectorado, Vicerrectorado e Inspección (lo habilita el Administrador):', r.vistasAdmin) : '') + fila('DOCENTES', 'Vistas para docentes:', r.vistasDoc);
+}
+async function crGuardarVistas(q) { const v = [...document.querySelectorAll('.cr-vchk-' + q + ':checked')].map(x => x.value); await run(async () => { const r = await apiT('apiGuardarVistasCrono', q, v); toast(r.mensaje, 'ok'); cargarCrono(true); }); }
 const crTipo = id => (S.crono.tipos.find(t => t.id === id) || { nombre: '', color: '#94a3b8' });
 function crInfo(i) {
   const x = S.crLista[i], t = crTipo(x.tipo);
@@ -2565,16 +2581,18 @@ function crInfo(i) {
 function crRango() {
   const d = parseC(S.crFecha);
   if (S.crVista === 'mes') return [ymdC(new Date(d.getFullYear(), d.getMonth(), 1)), ymdC(new Date(d.getFullYear(), d.getMonth() + 1, 0))];
+  if (S.crVista === 'dia') return [S.crFecha, S.crFecha];
+  if (S.crVista === 'anu') { const a = crAnios(), c = a.find(z => z.inicio <= S.crFecha && S.crFecha <= z.fin) || a.filter(z => z.fin < S.crFecha).pop() || a[0]; return c ? [c.inicio, c.fin] : [d.getFullYear() + '-01-01', d.getFullYear() + '-12-31']; } // año lectivo según la pestaña Periodos
   if (S.crVista === 'sem') { const l = new Date(d); l.setDate(d.getDate() - ((d.getDay() + 6) % 7)); const v = new Date(l); v.setDate(l.getDate() + 4); return [ymdC(l), ymdC(v)]; }
   const p = crPeriodos().find(x => x.id === $('cr-per').value) || crPeriodos().find(x => x.inicio <= S.crFecha && S.crFecha <= x.fin) || crPeriodos()[0];
   return p ? [p.inicio, p.fin, p] : [S.crFecha, S.crFecha];
 }
 function crPintar() {
   if (!S.crono) return;
-  ['mes', 'tri', 'sem'].forEach(v => $('cr-b-' + v).className = 'btn py-1 ' + (S.crVista === v ? 'btn-primary' : 'btn-sec'));
+  ['anu', 'mes', 'tri', 'sem', 'dia'].forEach(v => $('cr-b-' + v).className = 'btn py-1 ' + (S.crVista === v ? 'btn-primary' : 'btn-sec') + (S.crOk && !S.crOk.includes(v) ? ' hidden' : ''));
   $('cr-per').classList.toggle('hidden', S.crVista !== 'tri');
   if (S.crVista === 'tri') { const ps = crPeriodos(), v = $('cr-per').value; $('cr-per').innerHTML = ps.map(p => `<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join(''); const ac = ps.find(p => p.id === v) || ps.find(p => p.inicio <= S.crFecha && S.crFecha <= p.fin) || ps[0]; if (ac) $('cr-per').value = ac.id; }
-  const [desde, hasta, per] = crRango(), lista = S.crLista = crActs(desde, hasta, S.crVista === 'sem');
+  const [desde, hasta, per] = crRango(), lista = S.crLista = crActs(desde, hasta, crSem());
   const sinCl = y => lista.some(x => x.inicio <= y && y <= x.fin && crTipo(x.tipo) && (S.crono.tipos.find(t => t.id === x.tipo) || {}).sinClases);
   const chip = (x, i) => `<button class="cr-act" style="background:${esc(crTipo(x.tipo).color)}33;border-left:3px solid ${esc(crTipo(x.tipo).color)}" title="${esc(x.titulo + (x.responsable ? ' · ' + x.responsable : ''))}" onclick="crInfo(${i})">${esc(x.titulo)}</button>`;
   if (S.crVista === 'mes') {
@@ -2588,11 +2606,16 @@ function crPintar() {
     $('cr-tit').textContent = 'Semana del ' + desde.split('-').reverse().join('/') + ' al ' + hasta.split('-').reverse().join('/');
     let h = ''; for (let n = 0; n < 5; n++) { const dt = parseC(desde); dt.setDate(dt.getDate() + n); const y = ymdC(dt);
       const del = lista.map((x, i) => [x, i]).filter(([x]) => x.inicio <= y && y <= x.fin);
-      h += `<div class="border rounded-2xl p-2 ${sinCl(y) ? 'bg-slate-100' : 'bg-white'}"><div class="font-black text-xs mb-1">${DIAS_C[n]} ${dt.getDate()} de ${MESES_C[dt.getMonth()]}</div>${del.map(([x, i]) => `<div class="mb-1 rounded-lg p-1.5" style="background:${esc(crTipo(x.tipo).color)}22;border-left:4px solid ${esc(crTipo(x.tipo).color)}">
+      h += `<div class="border rounded-2xl p-2 ${sinCl(y) ? 'bg-slate-100' : 'bg-white'}"><div class="font-black text-xs mb-1">${DIAS_C[n]} ${dt.getDate()} de ${MESES_C[dt.getMonth()]}</div>${notasDia(y)}${del.map(([x, i]) => `<div class="mb-1 rounded-lg p-1.5" style="background:${esc(crTipo(x.tipo).color)}22;border-left:4px solid ${esc(crTipo(x.tipo).color)}">
         <button class="font-bold text-left" onclick="crInfo(${i})">${esc(x.titulo)}</button>${x.responsable ? `<div class="text-[10px]">👤 ${esc(x.responsable)}</div>` : ''}${x.obs ? `<div class="text-[10px] text-slate-700"><b>Observaciones:</b> ${esc(x.obs)}</div>` : ''}</div>`).join('') || '<div class="text-[10px] text-slate-400">Sin actividades</div>'}</div>`; }
     $('cr-area-v').innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-5 gap-2 text-[11px]">${h}</div>`;
+  } else if (S.crVista === 'dia') {
+    const dt = parseC(desde);
+    $('cr-tit').textContent = DIAS_C[(dt.getDay() + 6) % 7] + ' ' + dt.getDate() + ' de ' + MESES_C[dt.getMonth()] + ' de ' + dt.getFullYear();
+    $('cr-area-v').innerHTML = `<div class="border rounded-2xl p-3 space-y-2 ${sinCl(desde) ? 'bg-slate-100' : 'bg-white'}">${notasDia(desde)}${lista.map((x, i) => `<div class="rounded-lg p-2 text-xs" style="background:${esc(crTipo(x.tipo).color)}22;border-left:4px solid ${esc(crTipo(x.tipo).color)}">
+      <button class="font-bold text-left text-sm" onclick="crInfo(${i})">${esc(x.titulo)}</button><div class="text-[11px]">${esc(crTipo(x.tipo).nombre)}${x.responsable ? ' · 👤 ' + esc(x.responsable) : ''}${x.area ? ' · ' + esc(x.area) : ''}</div>${x.obs ? `<div class="text-[11px] text-slate-700"><b>Observaciones:</b> ${esc(x.obs)}</div>` : ''}</div>`).join('') || '<div class="text-xs text-slate-400">Sin actividades este día</div>'}</div>`;
   } else {
-    $('cr-tit').textContent = (per ? per.nombre + ' · ' : '') + desde.split('-').reverse().join('/') + ' al ' + hasta.split('-').reverse().join('/');
+    $('cr-tit').textContent = (S.crVista === 'anu' ? 'Año lectivo ' + (desde.slice(0, 4) === hasta.slice(0, 4) ? desde.slice(0, 4) : desde.slice(0, 4) + '–' + hasta.slice(0, 4)) + ' · ' : '') + (per ? per.nombre + ' · ' : '') + desde.split('-').reverse().join('/') + ' al ' + hasta.split('-').reverse().join('/');
     const porMes = {}; lista.forEach((x, i) => { const m = x.inicio.slice(0, 7) < desde.slice(0, 7) ? desde.slice(0, 7) : x.inicio.slice(0, 7); (porMes[m] = porMes[m] || []).push([x, i]); });
     $('cr-area-v').innerHTML = Object.keys(porMes).sort().map(m => { const [a, mm] = m.split('-'); return `<div class="mb-2"><div class="font-black text-xs bg-slate-100 rounded-lg px-2 py-1">${MESES_C[Number(mm) - 1].toUpperCase()} ${a}</div>
       <table class="w-full planilla text-[11px]"><tbody>${porMes[m].map(([x, i]) => `<tr><td style="width:150px">${esc(x.inicio.split('-').reverse().join('/'))}${x.fin !== x.inicio ? ' – ' + esc(x.fin.split('-').reverse().join('/')) : ''}</td><td style="text-align:left"><button class="font-bold text-left" onclick="crInfo(${i})">${esc(x.titulo)}</button></td>
@@ -2600,17 +2623,17 @@ function crPintar() {
   }
 }
 function crTabla() {
-  const [desde, hasta] = crRango(), l = crActs(desde, hasta, S.crVista === 'sem');
-  return { desde, hasta, filas: l.map(x => [x.inicio, x.fin, x.titulo, crTipo(x.tipo).nombre, x.responsable, x.area].concat(S.crVista === 'sem' ? [x.obs] : [])) };
+  const [desde, hasta] = crRango(), l = crActs(desde, hasta, crSem());
+  return { desde, hasta, filas: l.map(x => [x.inicio, x.fin, x.titulo, crTipo(x.tipo).nombre, x.responsable, x.area].concat(crSem() ? [x.obs] : [])) };
 }
 function crImprimir() {
-  const t = crTabla(), cab = ['Inicio', 'Fin', 'Actividad', 'Tipo', 'Responsable', 'Área'].concat(S.crVista === 'sem' ? ['Observaciones'] : []);
+  const t = crTabla(), cab = ['Inicio', 'Fin', 'Actividad', 'Tipo', 'Responsable', 'Área'].concat(crSem() ? ['Observaciones'] : []);
   mostrarReporte({ tipo: 'html', titulo: 'Cronograma escolar', sub: $('cr-tit').textContent, inst: S.cat.inst, params: S.cat.params, emitido: S.cat.hoy, emisor: S.ses.nombre, filtros: {},
     html: `<table><thead><tr>${cab.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${t.filas.map(f => `<tr>${f.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('') || '<tr><td colspan="7">Sin actividades.</td></tr>'}</tbody></table>` });
 }
 function crExcel() {
   if (typeof XLSX === 'undefined') return toast('No se pudo cargar el generador de Excel.', 'err');
-  const t = crTabla(), cab = ['Inicio', 'Fin', 'Actividad', 'Tipo', 'Responsable', 'Área'].concat(S.crVista === 'sem' ? ['Observaciones'] : []);
+  const t = crTabla(), cab = ['Inicio', 'Fin', 'Actividad', 'Tipo', 'Responsable', 'Área'].concat(crSem() ? ['Observaciones'] : []);
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([cab].concat(t.filas)), 'Cronograma'); XLSX.writeFile(wb, 'Cronograma_' + t.desde + '_' + t.hasta + '.xlsx');
 }
 function crCorreo() {
