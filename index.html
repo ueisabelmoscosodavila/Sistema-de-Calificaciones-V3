@@ -573,14 +573,15 @@
         <h3 class="font-black text-sm">📤 Planificaciones y coordinadores de área / subnivel</h3>
         <div id="co-form" class="hidden grid grid-cols-2 sm:grid-cols-6 gap-2 items-end bg-orange-50 border border-orange-200 rounded-2xl p-3 text-xs">
           <div class="col-span-2"><label class="lbl">Docente coordinador/a</label><select id="co-doc" class="inp"></select></div>
-          <div><label class="lbl">Área</label><select id="co-are" class="inp"></select></div>
+          <div><label class="lbl">Área</label><select id="co-are" class="inp" onchange="coAsigs()"></select></div>
           <div class="col-span-2"><label class="lbl">Subniveles (puede marcar varios)</label><div id="co-sub" class="flex flex-wrap gap-x-2 gap-y-0.5 bg-white border rounded-xl px-2 py-1"></div></div>
           <div><label class="lbl">Jornada</label><select id="co-jor" class="inp"><option>Ambas</option><option>Matutina</option><option>Vespertina</option></select></div>
           <div><label class="lbl">Fecha límite</label><input id="co-lim" type="date" class="inp"></div>
+          <div id="co-asig-w" class="col-span-2 sm:col-span-6 hidden"><label class="lbl">Asignaturas del área (marque una o varias; si no marca ninguna, coordina toda el área)</label><div id="co-asig" class="flex flex-wrap gap-x-3 gap-y-0.5 bg-white border rounded-xl px-2 py-1 max-h-40 overflow-y-auto"></div></div>
           <div class="col-span-2 sm:col-span-3"><label class="lbl">Carpeta de Drive (enlace o ID)</label><input id="co-car" class="inp" placeholder="https://drive.google.com/drive/folders/…"></div>
           <button onclick="guardarCoord()" class="btn btn-ok">💾 Asignar</button>
         </div>
-        <p class="text-[10px] text-slate-500">El <b>área</b> tiene prioridad: cada clase va al coordinador de su área (en ese subnivel y jornada). Hasta 7° lo que no tiene coordinador de área (p. ej. Acompañamiento Integral) va al coordinador del subnivel. Desde 8° solo hay coordinadores de área.</p>
+        <p class="text-[10px] text-slate-500">Prioridad: <b>asignatura elegida</b> (p. ej. una optativa) → <b>área</b> → subnivel. Cada clase va al coordinador más específico (en ese subnivel y jornada). Hasta 7° lo que no tiene coordinador de área (p. ej. Acompañamiento Integral) va al coordinador del subnivel. Desde 8° solo hay coordinadores de área.</p>
         <div id="co-area" class="text-xs"></div>
         <div id="co-sin" class="text-xs"></div>
       </div>
@@ -1406,7 +1407,7 @@ api('apiInfoPublica').then(i => {
   revisarVersion(i.version);
 }).catch(() => {});
 // ---- v4.20: la página se actualiza sola cuando hay una versión nueva del sistema ----
-const VERSION_CLIENTE = '4.27.2';
+const VERSION_CLIENTE = '4.27.3';
 function revisarVersion(v) {
   if (!v || v === VERSION_CLIENTE || EN_APPS_SCRIPT) return;
   if (S.sucio) return; // nunca se recarga con notas sin guardar
@@ -2498,6 +2499,7 @@ async function cargarCoord() {
     if (r.puedeEditar) {
       $('co-doc').innerHTML = opts(r.docentes.map(d => d.id), '', '—'); [...$('co-doc').options].forEach(o => { const d = r.docentes.find(x => x.id === o.value); if (d) o.textContent = d.nombre; });
       $('co-are').innerHTML = '<option value="">(cualquiera)</option>' + r.areas.map(a => `<option>${esc(a)}</option>`).join('');
+      coAsigs();
       $('co-sub').innerHTML = r.subniveles.map(a => `<label class="flex items-center gap-1"><input type="checkbox" class="co-sub-c" value="${esc(a)}"> ${esc(a)}</label>`).join('');
     }
     $('co-area').innerHTML = r.coordinaciones.length ? r.coordinaciones.map(c => `<div class="border rounded-2xl p-2 mb-2">
@@ -2515,8 +2517,14 @@ async function cargarCoord() {
       ${sc.map(x => `<tr><td style="text-align:left">${esc(x.area)}</td><td style="text-align:left">${esc(x.asignatura)}</td><td style="text-align:left">${esc(x.grado + ' ' + x.paralelo)}</td><td>${esc(x.jornada)}</td><td style="text-align:left">${esc(x.docente)}</td></tr>`).join('')}</tbody></table></details>` : '';
   } catch (e) { $('co-area').textContent = e.message; }
 }
+// v4.27.3: asignaturas del área elegida (p. ej. las optativas creadas), con casillas
+function coAsigs() {
+  const a = $('co-are').value, l = ((S.coord || {}).asignaturasArea || {})[a] || [];
+  $('co-asig-w').classList.toggle('hidden', !a || !l.length);
+  $('co-asig').innerHTML = l.map(x => `<label class="flex items-center gap-1"><input type="checkbox" class="co-asig-c" value="${esc(x)}"> ${esc(x)}</label>`).join('');
+}
 async function guardarCoord() {
-  const x = { idDocente: $('co-doc').value, area: $('co-are').value, subniveles: [...document.querySelectorAll('.co-sub-c:checked')].map(i => i.value), jornada: $('co-jor').value, carpeta: $('co-car').value, fechaLimite: $('co-lim').value };
+  const x = { idDocente: $('co-doc').value, area: $('co-are').value, subniveles: [...document.querySelectorAll('.co-sub-c:checked')].map(i => i.value), asignaturas: [...document.querySelectorAll('.co-asig-c:checked')].map(i => i.value), jornada: $('co-jor').value, carpeta: $('co-car').value, fechaLimite: $('co-lim').value };
   await run(async () => { const r = await apiT('apiGuardarCoordinador', x); toast(r.mensaje, 'ok'); cargarCoord(); });
 }
 async function quitarCoord(id) { if (!confirm('¿Quitar esta coordinación? Los archivos subidos se conservan.')) return; await run(async () => { const r = await apiT('apiQuitarCoordinador', id); toast(r.mensaje, 'ok'); cargarCoord(); }); }
