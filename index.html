@@ -574,13 +574,15 @@
         <div id="co-form" class="hidden grid grid-cols-2 sm:grid-cols-6 gap-2 items-end bg-orange-50 border border-orange-200 rounded-2xl p-3 text-xs">
           <div class="col-span-2"><label class="lbl">Docente coordinador/a</label><select id="co-doc" class="inp"></select></div>
           <div><label class="lbl">Área</label><select id="co-are" class="inp"></select></div>
-          <div><label class="lbl">Subnivel</label><select id="co-sub" class="inp"></select></div>
+          <div class="col-span-2"><label class="lbl">Subniveles (puede marcar varios)</label><div id="co-sub" class="flex flex-wrap gap-x-2 gap-y-0.5 bg-white border rounded-xl px-2 py-1"></div></div>
           <div><label class="lbl">Jornada</label><select id="co-jor" class="inp"><option>Ambas</option><option>Matutina</option><option>Vespertina</option></select></div>
           <div><label class="lbl">Fecha límite</label><input id="co-lim" type="date" class="inp"></div>
-          <div class="col-span-2 sm:col-span-5"><label class="lbl">Carpeta de Drive (enlace o ID)</label><input id="co-car" class="inp" placeholder="https://drive.google.com/drive/folders/…"></div>
+          <div class="col-span-2 sm:col-span-3"><label class="lbl">Carpeta de Drive (enlace o ID)</label><input id="co-car" class="inp" placeholder="https://drive.google.com/drive/folders/…"></div>
           <button onclick="guardarCoord()" class="btn btn-ok">💾 Asignar</button>
         </div>
+        <p class="text-[10px] text-slate-500">El <b>área</b> tiene prioridad: cada clase va al coordinador de su área (en ese subnivel y jornada). Hasta 7° lo que no tiene coordinador de área (p. ej. Acompañamiento Integral) va al coordinador del subnivel. Desde 8° solo hay coordinadores de área.</p>
         <div id="co-area" class="text-xs"></div>
+        <div id="co-sin" class="text-xs"></div>
       </div>
     </div>
 
@@ -1404,7 +1406,7 @@ api('apiInfoPublica').then(i => {
   revisarVersion(i.version);
 }).catch(() => {});
 // ---- v4.20: la página se actualiza sola cuando hay una versión nueva del sistema ----
-const VERSION_CLIENTE = '4.27.1';
+const VERSION_CLIENTE = '4.27.2';
 function revisarVersion(v) {
   if (!v || v === VERSION_CLIENTE || EN_APPS_SCRIPT) return;
   if (S.sucio) return; // nunca se recarga con notas sin guardar
@@ -2496,7 +2498,7 @@ async function cargarCoord() {
     if (r.puedeEditar) {
       $('co-doc').innerHTML = opts(r.docentes.map(d => d.id), '', '—'); [...$('co-doc').options].forEach(o => { const d = r.docentes.find(x => x.id === o.value); if (d) o.textContent = d.nombre; });
       $('co-are').innerHTML = '<option value="">(cualquiera)</option>' + r.areas.map(a => `<option>${esc(a)}</option>`).join('');
-      $('co-sub').innerHTML = '<option value="">(cualquiera)</option>' + r.subniveles.map(a => `<option>${esc(a)}</option>`).join('');
+      $('co-sub').innerHTML = r.subniveles.map(a => `<label class="flex items-center gap-1"><input type="checkbox" class="co-sub-c" value="${esc(a)}"> ${esc(a)}</label>`).join('');
     }
     $('co-area').innerHTML = r.coordinaciones.length ? r.coordinaciones.map(c => `<div class="border rounded-2xl p-2 mb-2">
       <div class="flex flex-wrap justify-between gap-2"><div><b>${esc(c.coordinador)}</b> · ${esc(c.texto)}${c.fechaLimite ? ' · fecha límite ' + esc(c.fechaLimite) : ''} · <span class="font-black ${c.entregados === c.docentes.length ? 'text-emerald-700' : 'text-amber-700'}">${c.entregados}/${c.docentes.length} entregadas</span></div>
@@ -2505,10 +2507,16 @@ async function cargarCoord() {
       ${c.docentes.map(d => `<tr><td style="text-align:left">${esc(d.nombre)}</td><td style="text-align:left">${d.clases.map(esc).join('<br>')}</td><td>${d.entregas.length ? '✅ Entregada' : '⏳ Pendiente'}</td>
         <td style="text-align:left">${d.entregas.map(e => `<a href="${esc(e.url)}" target="_blank" class="text-sky-700 underline">${esc(e.archivo)}</a> <small>(${esc(e.fecha)})</small>`).join('<br>')}</td></tr>`).join('') || '<tr><td colspan="4" class="text-slate-400">Ningún docente coincide con el área / subnivel.</td></tr>'}</tbody></table></div>`).join('')
       : '<p class="text-slate-400">Aún no hay coordinadores asignados.</p>';
+    // v4.27.2: clases que no caen en ninguna coordinación
+    const sc = r.sinCoordinador || [];
+    $('co-sin').innerHTML = sc.length ? `<details class="border border-amber-300 bg-amber-50 rounded-2xl p-2"><summary class="cursor-pointer font-black text-amber-900">⚠️ Clases sin coordinador (${sc.length})</summary>
+      <p class="text-[10px] text-amber-900 my-1">Estas clases del Distributivo no tienen coordinador: créelo para su área (o, hasta 7°, para su subnivel) y aparecerán solas.</p>
+      <table class="w-full planilla text-[11px]"><thead><tr><th class="text-left">Área</th><th class="text-left">Asignatura</th><th class="text-left">Curso</th><th>Jornada</th><th class="text-left">Docente</th></tr></thead><tbody>
+      ${sc.map(x => `<tr><td style="text-align:left">${esc(x.area)}</td><td style="text-align:left">${esc(x.asignatura)}</td><td style="text-align:left">${esc(x.grado + ' ' + x.paralelo)}</td><td>${esc(x.jornada)}</td><td style="text-align:left">${esc(x.docente)}</td></tr>`).join('')}</tbody></table></details>` : '';
   } catch (e) { $('co-area').textContent = e.message; }
 }
 async function guardarCoord() {
-  const x = { idDocente: $('co-doc').value, area: $('co-are').value, subnivel: $('co-sub').value, jornada: $('co-jor').value, carpeta: $('co-car').value, fechaLimite: $('co-lim').value };
+  const x = { idDocente: $('co-doc').value, area: $('co-are').value, subniveles: [...document.querySelectorAll('.co-sub-c:checked')].map(i => i.value), jornada: $('co-jor').value, carpeta: $('co-car').value, fechaLimite: $('co-lim').value };
   await run(async () => { const r = await apiT('apiGuardarCoordinador', x); toast(r.mensaje, 'ok'); cargarCoord(); });
 }
 async function quitarCoord(id) { if (!confirm('¿Quitar esta coordinación? Los archivos subidos se conservan.')) return; await run(async () => { const r = await apiT('apiQuitarCoordinador', id); toast(r.mensaje, 'ok'); cargarCoord(); }); }
